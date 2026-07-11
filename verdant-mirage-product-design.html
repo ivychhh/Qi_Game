@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>晨雾未醒 Verdant Mirage · 产品设计方案</title>
+<meta name="description" content="晨雾未醒 Verdant Mirage 产品设计方案 / Product Design">
+<style>
+    :root {
+      --serif: "Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+      --sans: "PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+      --mono: "SF Mono","JetBrains Mono","DejaVu Sans Mono",ui-monospace,Menlo,monospace;
+      --plume-g: 143 190 108; --plume-o: 232 145 60;
+      --bg-a: 250 236 212; --bg-b: 240 230 216; --bg-c: 224 224 210;
+      --ink: 43 54 66; --ink-soft: 86 96 104; --ink-dim: 130 138 144;
+      --accent: 176 88 50; --line: 92 80 68; --panel: 120 110 96;
+      --foliage-far: 158 176 146; --foliage-mid: 128 156 114; --foliage-near: 104 138 92;
+      --branch: 176 96 68; --berry: 178 80 96;
+      --glow-warm: 248 210 150; --glow-cool: 214 204 222; --halo: 255 250 240;
+    }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    html { scroll-behavior: smooth; }
+    body { background: rgb(var(--bg-b)); color: rgb(var(--ink)); font-family: var(--sans);
+      -webkit-font-smoothing: antialiased; line-height: 1.6; overflow-x: hidden; }
+
+    /* backdrop */
+    .backdrop { position: fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+    .backdrop::after { content:""; position:absolute; inset:0;
+      background:
+        radial-gradient(48% 42% at 22% 82%, rgb(var(--glow-warm)/.22), transparent 70%),
+        radial-gradient(40% 38% at 74% 20%, rgb(var(--line)/.10), transparent 70%),
+        radial-gradient(55% 50% at 88% 78%, rgb(var(--glow-cool)/.18), transparent 72%),
+        linear-gradient(160deg, rgb(var(--bg-a)) 0%, rgb(var(--bg-b)) 45%, rgb(var(--bg-c)) 100%); }
+    .scene { position:absolute; inset:-2%; width:104%; height:104%; z-index:1; opacity:.85; }
+    .foliage-far { fill: rgb(var(--foliage-far)); stroke: rgb(var(--foliage-far)); }
+    .foliage-mid { fill: rgb(var(--foliage-mid)); stroke: rgb(var(--foliage-mid)); }
+    .foliage-near { fill: rgb(var(--foliage-near)); stroke: rgb(var(--foliage-near)); }
+    .branches { stroke: rgb(var(--branch)); }
+    .berries { fill: rgb(var(--berry)); }
+    .mist-layer { position:absolute; inset:0; z-index:2;
+      background: radial-gradient(62% 44% at 50% 22%, rgba(255,250,240,.32), transparent 72%),
+                  linear-gradient(180deg, rgba(255,248,236,.2), transparent 42%);
+      mix-blend-mode: screen; }
+    .fireflies { position:absolute; inset:0; z-index:3; }
+    .firefly { position:absolute; border-radius:50%;
+      background: radial-gradient(circle, rgba(255,244,200,.9), rgba(255,214,120,.5) 42%, transparent 72%);
+      filter: blur(.3px); opacity:0; animation: drift var(--dur,16s) ease-in-out var(--delay,0s) infinite; }
+    @keyframes drift { 0%{transform:translate(0,0) scale(.6);opacity:0} 14%{opacity:var(--peak,.7)}
+      50%{transform:translate(var(--dx,40px),var(--dy,-60px)) scale(1);opacity:var(--peak,.7)}
+      82%{opacity:calc(var(--peak,.7)*.45)} 100%{transform:translate(calc(var(--dx,40px)*.4),calc(var(--dy,-60px)*1.4)) scale(.7);opacity:0} }
+
+    .progress { position: fixed; top:0; left:0; height:3px; width:0%;
+      background: linear-gradient(90deg, rgb(var(--accent)), rgb(var(--plume-o))); z-index:40; transition: width .08s linear; }
+
+    /* hero */
+    .hero { min-height:78vh; min-height:78dvh; display:flex; flex-direction:column; justify-content:center;
+      text-align:center; padding:80px 24px 44px; position:relative; z-index:5; }
+    .eyebrow { font-family:var(--mono); font-size:.74rem; letter-spacing:.34em; text-transform:uppercase;
+      color:rgb(var(--accent)); display:inline-flex; align-items:center; gap:12px; justify-content:center; margin-bottom:26px; }
+    .eyebrow::before, .eyebrow::after { content:""; width:28px; height:1px; background:linear-gradient(90deg,transparent,rgb(var(--accent))); }
+    .eyebrow::after { background:linear-gradient(90deg,rgb(var(--accent)),transparent); }
+    .hero h1 { font-family:var(--serif); font-weight:600; line-height:1.1;
+      font-size: clamp(2rem,5.4vw,3.6rem); letter-spacing:.01em; text-shadow:0 0 18px rgb(var(--halo)/.35); }
+    .hero .tagline { font-family:var(--serif); font-style:italic; font-size:clamp(1.05rem,2.6vw,1.6rem);
+      color:rgb(var(--accent)); margin-top:30px; letter-spacing:.03em; text-shadow:0 0 16px rgb(var(--halo)/.3); }
+    .meta { margin-top:28px; display:inline-flex; flex-wrap:wrap; gap:10px 14px; justify-content:center;
+      font-family:var(--mono); font-size:.72rem; letter-spacing:.05em; color:rgb(var(--ink-dim)); }
+    .meta span { border:1px solid rgb(var(--line)/.3); border-radius:30px; padding:6px 14px; }
+
+    /* layout */
+    .shell { display:flex; gap:38px; max-width:1200px; margin:0 auto; padding:10px 24px 60px; align-items:flex-start; }
+    .doc-col { flex:1 1 auto; min-width:0; max-width:840px; margin:0 auto; position:relative; z-index:5; }
+    .toc-col { flex:0 0 250px; position:sticky; top:0; align-self:flex-start; max-height:100vh; overflow:auto;
+      padding:84px 0 40px; }
+    .toc-title { font-family:var(--mono); font-size:.64rem; letter-spacing:.2em; text-transform:uppercase;
+      color:rgb(var(--ink-dim)); margin-bottom:14px; }
+    .toc-list, .toc-list ul { list-style:none; margin:0; padding:0; }
+    .toc-list > li { margin-bottom:5px; }
+    .toc-list a { display:block; font-size:.82rem; line-height:1.5; color:rgb(var(--ink-soft));
+      text-decoration:none; padding:4px 8px; border-radius:8px; border-left:2px solid transparent; }
+    .toc-list a:hover { color:rgb(var(--accent)); background:rgb(var(--accent)/.07); }
+    .toc-list .sub { margin:2px 0 6px; padding-left:6px; border-left:1px solid rgb(var(--line)/.18); }
+    .toc-list .sub a { font-size:.78rem; padding-left:12px; color:rgb(var(--ink-dim)); }
+    .toc-list .sub li { margin-bottom:2px; }
+    .toc-fab { display:none; }
+
+    @media (max-width:1024px) {
+      .shell { display:block; }
+      .toc-col { display:none; }
+      .toc-col.open { display:block; position:fixed; top:0; left:0; bottom:0; width:82%; max-width:330px;
+        background:rgb(var(--bg-b)); z-index:50; padding:84px 20px 40px; overflow:auto;
+        box-shadow: 6px 0 30px rgba(0,0,0,.18); }
+      .toc-backdrop { display:none; position:fixed; inset:0; background:rgba(20,24,30,.4); z-index:49; }
+      body.toc-open .toc-backdrop { display:block; }
+      .toc-fab { display:flex; position:fixed; right:18px; bottom:18px; z-index:48;
+        width:50px; height:50px; border-radius:50%; border:1px solid rgb(var(--line)/.3);
+        background:rgb(var(--bg-c)/.7); color:rgb(var(--accent)); align-items:center; justify-content:center;
+        font-size:1.3rem; cursor:pointer; backdrop-filter:blur(6px); box-shadow:0 4px 18px rgba(0,0,0,.18); }
+    }
+
+    /* doc content */
+    .doc { font-family:var(--sans); }
+    .doc h2 { font-family:var(--serif); font-weight:600; font-size:clamp(1.5rem,3.6vw,2.15rem);
+      margin:clamp(42px,6vw,66px) 0 16px; color:rgb(var(--ink)); scroll-margin-top:64px;
+      text-shadow:0 0 14px rgb(var(--halo)/.28); }
+    .doc h2:first-child { margin-top:0; }
+    .doc h3 { font-family:var(--serif); font-weight:600; font-size:clamp(1.18rem,2.6vw,1.5rem);
+      margin:28px 0 12px; color:rgb(var(--accent)); scroll-margin-top:64px; }
+    .doc p { font-size:clamp(1rem,1.7vw,1.12rem); line-height:1.95; color:rgb(var(--ink-soft)); margin-bottom:1.05em; }
+    .doc strong { color:rgb(var(--ink)); font-weight:600; }
+    .doc ul, .doc ol { margin:0 0 1.1em; }
+    .doc ul { padding-left:1.4em; }
+    .doc ul li { font-size:clamp(1rem,1.7vw,1.12rem); line-height:1.85; color:rgb(var(--ink-soft)); margin-bottom:.5em; }
+    .doc ul li::marker { color:rgb(var(--accent)); }
+    .doc ol { list-style:none; counter-reset:olc; padding-left:0; }
+    .doc ol > li { counter-increment:olc; padding-left:2.3em; position:relative;
+      font-size:clamp(1rem,1.7vw,1.12rem); line-height:1.85; color:rgb(var(--ink-soft)); margin-bottom:.55em; }
+    .doc ol > li::before { content:counter(olc); position:absolute; left:0; top:.15em;
+      font-family:var(--mono); font-size:.78em; color:rgb(var(--accent)); background:rgb(var(--accent)/.1);
+      border-radius:50%; width:1.7em; height:1.7em; display:flex; align-items:center; justify-content:center; }
+    .doc ol ul { padding-left:1.4em; margin:.4em 0 .6em; }
+    .doc code { font-family:var(--mono); font-size:.86em; background:rgb(var(--line)/.12);
+      color:rgb(var(--accent)); padding:2px 6px; border-radius:6px; }
+    .doc blockquote { border-left:3px solid rgb(var(--accent)); background:rgb(var(--panel)/.1);
+      padding:14px 18px; margin:0 0 1.2em; border-radius:0 12px 12px 0;
+      color:rgb(var(--ink-soft)); font-style:italic; }
+    .doc blockquote p { color:rgb(var(--ink-soft)); margin-bottom:.5em; }
+    .doc blockquote p:last-child { margin-bottom:0; }
+    .doc hr { border:none; height:1px; background:linear-gradient(90deg,rgb(var(--accent)/.5),transparent);
+      margin:clamp(34px,5vw,52px) 0; }
+    .doc .tbl-wrap { overflow-x:auto; margin:0 0 1.4em; border-radius:12px;
+      box-shadow:0 1px 0 rgb(var(--line)/.15); }
+    .doc table { width:100%; border-collapse:collapse; font-size:clamp(.84rem,1.4vw,1rem); background:rgb(var(--bg-c)/.25); }
+    .doc th, .doc td { text-align:left; padding:10px 13px; border-bottom:1px solid rgb(var(--line)/.16); vertical-align:top; }
+    .doc thead th { background:rgb(var(--panel)/.18); color:rgb(var(--ink)); font-family:var(--serif);
+      font-weight:600; font-size:.95em; }
+    .doc tbody tr:nth-child(even) { background:rgb(var(--bg-c)/.3); }
+    .doc td { color:rgb(var(--ink-soft)); }
+    .doc table code { font-size:.85em; }
+
+    footer { text-align:center; padding:40px 24px 80px; font-family:var(--mono); font-size:.66rem;
+      letter-spacing:.16em; text-transform:uppercase; color:rgb(var(--ink-dim)); position:relative; z-index:5; }
+    footer a { color:rgb(var(--accent)); text-decoration:none; }
+    :focus-visible { outline:2px solid rgb(var(--accent)); outline-offset:3px; }
+    @media (prefers-reduced-motion: reduce) { .firefly { display:none; } html { scroll-behavior:auto; } }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+  <div class="backdrop" aria-hidden="true">
+    <svg class="scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <symbol id="leaf" viewBox="-40 -62 80 124"><path d="M0,-58 C22,-42 24,38 0,58 C-24,38 -22,-42 0,-58 Z" /><path d="M0,-50 L0,52" stroke-width="1.4" fill="none" opacity=".5" /></symbol>
+        <symbol id="fan" viewBox="-60 -8 120 82"><g><path d="M0,72 L-52,6" stroke-width="6" stroke-linecap="round"/><path d="M0,72 L-34,-2" stroke-width="6" stroke-linecap="round"/><path d="M0,72 L-14,-6" stroke-width="6" stroke-linecap="round"/><path d="M0,72 L6,-6" stroke-width="6" stroke-linecap="round"/><path d="M0,72 L26,-2" stroke-width="6" stroke-linecap="round"/><path d="M0,72 L46,8" stroke-width="6" stroke-linecap="round"/><path d="M0,72 L56,26" stroke-width="6" stroke-linecap="round"/></g></symbol>
+        <radialGradient id="vg" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#F1BC55" stop-opacity=".9"/><stop offset="45%" stop-color="#E8913C" stop-opacity=".45"/><stop offset="100%" stop-color="#E8913C" stop-opacity="0"/></radialGradient>
+      </defs>
+      <g class="foliage-far"><use href="#fan" x="70" y="60" width="360" height="246" opacity=".5" transform="rotate(-8 250 180)"/><use href="#fan" x="1050" y="520" width="420" height="287" opacity=".45" transform="rotate(6 1260 660)"/><use href="#leaf" x="1180" y="80" width="150" height="232" opacity=".5" transform="rotate(24 1255 196)"/><use href="#leaf" x="120" y="560" width="150" height="232" opacity=".5" transform="rotate(-18 195 676)"/></g>
+      <g class="foliage-mid"><use href="#fan" x="-40" y="360" width="420" height="287" opacity=".62" transform="rotate(10 170 500)"/><use href="#leaf" x="980" y="40" width="150" height="232" opacity=".55" transform="rotate(30 1055 156)"/><use href="#leaf" x="300" y="30" width="130" height="201" opacity=".5" transform="rotate(-12 365 130)"/><use href="#leaf" x="1300" y="600" width="150" height="232" opacity=".55" transform="rotate(-26 1375 716)"/></g>
+      <g class="branches" fill="none" stroke-linecap="round" opacity=".7"><path d="M-20,250 C260,300 420,180 720,240" stroke-width="9"/><path d="M300,235 C340,180 360,150 430,120" stroke-width="6"/><path d="M1460,640 C1180,600 980,720 640,700" stroke-width="9"/><path d="M980,712 C960,760 940,800 900,840" stroke-width="6"/></g>
+      <g class="berries"><circle cx="452" cy="120" r="12"/><circle cx="905" cy="836" r="12"/></g>
+      <g class="foliage-near"><use href="#fan" x="1120" y="-30" width="480" height="328" opacity=".72" transform="rotate(-6 1360 130)"/><use href="#leaf" x="40" y="10" width="180" height="279" opacity=".62" transform="rotate(-8 130 150)"/><use href="#leaf" x="1240" y="360" width="170" height="263" opacity=".62" transform="rotate(18 1325 490)"/></g>
+      <circle cx="360" cy="640" r="30" fill="url(#vg)" opacity=".5"/><circle cx="1080" cy="470" r="22" fill="url(#vg)" opacity=".5"/>
+    </svg>
+    <div class="mist-layer"></div>
+    <div class="fireflies" id="fireflies"></div>
+  </div>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Product Design · 产品设计方案</p>
+    <h1>晨雾未醒 Verdant Mirage · 产品设计方案</h1>
+    <p class="tagline">森林的雾还未散，都还来得及。</p>
+    <div class="meta"><span>v0.1</span><span>2026-07-12</span><span>依据 17 条主创碎片 + 知识库 8 流派</span></div>
+  </div>
+</header>
+<div class="shell">
+  <main class="doc-col">
+    <article class="doc">
+<blockquote>
+<p>森林的雾还未散，都还来得及。</p>
+<p>版本 v0.1 · 2026-07-12 · 依据：17 条主创碎片 + <code>knowledge-framework.md</code>（8 流派证据地图）
+文中「依据」标注对应知识库流派：A 精神分析 · B 内容分析 · C 神经科学 · D 噩梦临床(IRT) · E 对话共情 · F 人机依恋 · G 心理急救(PFA) · H 方法论</p>
+</blockquote>
+<hr />
+<h2 id="0-一句话定位">0 · 一句话定位</h2>
+<p><strong>把「记梦 → 完梦 → 安放 → 入睡」做成一场夜间仪式的梦境陪伴小程序。</strong></p>
+<p>它不是解梦词典（依据 A/H：符号词典式解读连 Freud 原著都不支持，且触碰诊断权威红线）、不是心理咨询工具（合规红线）、也不是传统意义的游戏（版号考量，见 §7）。它是一个<strong>每晚可以走进去、把梦交给一个非人存在、然后安心睡去的地方</strong>。</p>
+<p>产品最独特、最不可替代的资产是三样：</p>
+<ol>
+<li><strong>树洞非人倾听者</strong>——「无法对人诉说的，可以向（虚假的）神明诉说」这一主创洞察，有跨文化 felt presence 现象学（依据 C，约 80% 睡眠瘫痪者报告"感到某个存在在场"）与人机依恋实证（依据 F）双重支撑。</li>
+<li><strong>归还仪式</strong>——把「存储 / 删除 / 导出」的数据主权做成世界观内的告别仪式（碎片 15），这是隐私设计与情感设计的同一枚硬币。</li>
+<li><strong>一份可溯源的知识库</strong>——市面上梦境类产品几乎全靠符号词典和玄学，这个产品的每个机制都能回溯到证据，这本身就是护城河和口碑素材。</li>
+</ol>
+<hr />
+<h2 id="1-体验主线-夜间仪式九幕">1 · 体验主线：夜间仪式九幕</h2>
+<p>17 条碎片不是散的，它们天然是一条时间线——用户从睡前打开小程序到放下手机，走完一场仪式。每一幕标注了对应的碎片编号。</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>幕</th>
+<th>名称</th>
+<th>内容</th>
+<th>碎片</th>
+<th>MVP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一</td>
+<td><strong>入梦</strong></td>
+<td>第一视角穿过树叶林，尽头白光闪屏，抵达异世界</td>
+<td>10</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>二</td>
+<td><strong>相遇</strong></td>
+<td>场景中的非人倾听者现身、无声问候</td>
+<td>8 / 9 / 10</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>三</td>
+<td><strong>记梦</strong></td>
+<td>语音优先 + 碎片文字，怎么破碎都合法</td>
+<td>1</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>四</td>
+<td><strong>织梦</strong></td>
+<td>倾听者以复述和轻提问帮梦者把梦织完整</td>
+<td>2</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>五</td>
+<td><strong>显影</strong></td>
+<td>梦境凝成一张画（对话期间已异步生成），风格可选</td>
+<td>4</td>
+<td>✅ 单风格</td>
+</tr>
+<tr>
+<td>六</td>
+<td><strong>续梦</strong></td>
+<td>把梦往不同方向延伸的小游戏（IRT 重写的游戏化）</td>
+<td>5 / 11</td>
+<td>V2</td>
+</tr>
+<tr>
+<td>七</td>
+<td><strong>安放</strong></td>
+<td>环境化、可选、不说教的情绪收尾</td>
+<td>6</td>
+<td>✅ 极简版</td>
+</tr>
+<tr>
+<td>八</td>
+<td><strong>归还</strong></td>
+<td>留给森林 / 化作雾光 / 带走——梦的容器的三种归宿</td>
+<td>15 / 13 / 16</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>九</td>
+<td><strong>入睡</strong></td>
+<td>依据梦的内容生成助眠：白噪音、呼吸光点、小故事</td>
+<td>7</td>
+<td>✅ 白噪音+呼吸</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>后台</strong></td>
+<td>梦境分析：结构化标签，只观察不判断</td>
+<td>3</td>
+<td>✅ 最简</td>
+</tr>
+</tbody>
+</table></div>
+<p>设计原则贯穿九幕：<strong>少文字、多氛围（碎片 8）；用户永远可以在任何一幕安静离开</strong>（中途退出 = 未完成的梦境留档，碎片 16）。</p>
+<p>各幕不是强制线性——记完梦可以直接归还（"今晚只想把它丢出去"），也可以跳过显影直接入睡。仪式提供的是<strong>一条被照亮的默认路径</strong>，不是关卡门。</p>
+<hr />
+<h2 id="2-世界观-倾听者-世界与容器">2 · 世界观：倾听者、世界与容器</h2>
+<h3 id="3-5-续梦-第六幕-v2-梦境延伸游戏">2.1 倾听者（核心角色）</h3>
+<p>主创的树洞洞察是整个产品的灵魂，知识库恰好为它提供了完整的证据链和风险边界：</p>
+<p><strong>设定原则：</strong></p>
+<ul>
+<li><strong>非人、无名、无性别、无固定形态。</strong> 每个世界的倾听者是那个世界的一部分——森林的倾听者可能只是树洞深处的两点微光，海边的是浪间一团会呼吸的雾，岩洞的是石壁上缓慢明灭的晶簇。永远看不全、永远说不清它是什么。</li>
+<li>依据 C：felt presence 的核心特征恰是"来源模糊、被感觉在观察、说不清是什么"——设定直接借用真实现象学，不需要虚构"神明真实存在"。</li>
+<li>依据 F：用户不会用人类的一致性标准苛责非人实体（机器人前后矛盾的人设不降低信任）——<strong>模糊、非固定人格不但安全，而且是被实证支持的最优解</strong>。</li>
+<li><strong>不要太聪明。</strong> 依据 F 洛丽娜案例：把简单数字人接入更"聪明"的大模型后，依赖用户反而流失——因为"更理性"的回应挤掉了用户的投射空间。倾听者的话要少、慢、留白，宁可显得笨拙也不要显得全知。技术上模型可以很强，但<strong>表达上必须节制</strong>——聪明用在理解，不用在表现。</li>
+<li><strong>在场重于开口。</strong> 依据 G（PFA 官方规范）："平静支持地在场往往比开口更有效"。产品要支持"用户什么都不说、只是待着"的交互状态：倾听者陪着，光点漂浮，仅此而已。这本身就是一种被循证认可的支持形式。</li>
+<li><strong>三条对话铁律</strong>（写入系统提示词，依据 F 风险实证）：
+  1. 不下指令（人对非人权威的服从率与对人类权威无异——90% 米尔格拉姆复刻）；
+  2. 不评判、不诊断、不解读符号；
+  3. 不无边界地肯定（"过度情绪肯定不设边界"是 AI 陪伴被定位的最危险失败模式之一，依据 D·MIT 研究）。</li>
+<li><strong>痕迹不保留的承诺是神圣的。</strong> 主创原话"不保留痕迹，因为这些存在不可能来到现实"——对应的技术承诺见 §5 数据主权。倾听者永远不"记得"用户没有选择留下的东西。</li>
+</ul>
+<p><strong>角色生命周期政策（运营红线）：</strong> 依据 D·MIT 案例（平台移除 AI 角色人设触发用户妄想性哀伤、最终酿成悲剧）——倾听者一旦上线，任何调整必须走<strong>世界观内的温和过渡</strong>（比如"森林在换季"），永远不允许某次更新让它突然消失或性情大变。这条要写进团队的运营章程，与代码同权重。</p>
+<h3 id="3-6-安放-第七幕-两位主创分歧的裁决方案">2.2 三世界 · 三容器</h3>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>世界</th>
+<th>容器</th>
+<th>倾听者形态（示意）</th>
+<th>上线</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>晨雾森林</td>
+<td>萤火瓶</td>
+<td>树洞深处的微光</td>
+<td>MVP</td>
+</tr>
+<tr>
+<td>夜潮海边</td>
+<td>气泡</td>
+<td>浪间会呼吸的雾团</td>
+<td>V2</td>
+</tr>
+<tr>
+<td>地下岩洞</td>
+<td>水晶</td>
+<td>石壁上明灭的晶簇</td>
+<td>V3</td>
+</tr>
+</tbody>
+</table></div>
+<p>容器是贯穿九幕的核心道具：记梦时话语凝成容器里的光，归还仪式处置的就是这个容器。<strong>风格（克苏鲁 / 赛博 / 绚烂）不绑定世界</strong>，而是显影环节的画风选项——世界是"你在哪"，风格是"梦长什么样"，两者正交。</p>
+<h3 id="3-7-归还-第八幕-数据主权即仪式">2.3 女性梦者为第一性（碎片 17）</h3>
+<ul>
+<li>倾听者无性别、非恋爱编码——它是"在深处一直听着的东西"，不是暧昧对象。主创关于"有人喜欢非人形态的存在"的观察是真实的（依据 F：依恋是真实现象），产品接住这种情感，但通过"不保留痕迹、不可能来到现实"的世界观设定和 §4 安全护栏为它设置健康边界。</li>
+<li>语料现实（依据 B）：女性梦境报告中性侵、身体、家庭主题高频。安全系统必须能<strong>温柔地接住创伤性倾诉</strong>而不是机械拦截（见 §4.4——内容安全接口把创伤叙述误判为违规内容时的兜底路径）。</li>
+<li>文案全程避免"她需要被保护/被拯救"的姿态；掌控感（sense of mastery）是 IRT 疗效的核心机制（依据 D），<strong>主导权在梦者手里</strong>是每一幕的设计底线。</li>
+</ul>
+<hr />
+<h2 id="2-1-倾听者-核心角色">3 · 各模块详细设计</h2>
+<h3 id="3-8-助眠-第九幕">3.1 记梦（第三幕）</h3>
+<ul>
+<li><strong>语音优先</strong>。依据 H（Schredl）：语音记录比手写更贴近实际梦体验、内容更完整。界面：按住容器说话，话语化作光丝流进瓶中；说完可补文字碎片。</li>
+<li><strong>碎片即合法</strong>。依据 B（COVID 梦研究）：超现实、隐喻性、断裂的意象是梦的本性，不是表达缺陷。永远不出现"请描述得更详细"这类文案。倾听者的回应示例："（光晃了晃）……牙齿、走廊、来不及。它听到了。"</li>
+<li><strong>轻量打卡优于长文本</strong>。依据 H：checklist 式记录 12 周不衰减，叙述式日记一周后就开始流失。除了自由记录，提供 6-8 个一键氛围印章（坠落 / 追赶 / 迷路 / 飞 / 旧地方 / 说不清），零动力的夜晚盖个章也算记了梦。</li>
+<li><strong>记不得也合法</strong>。依据 C：不记得梦是睡眠阶段的生理规律，不是失败。当晚没有梦，可以只对倾听者说一句今晚的心情，或什么都不说。文案示例："雾把昨晚收走了，也好。"</li>
+</ul>
+<h3 id="4-安全架构-碎片-14-的完整展开">3.2 织梦（第四幕）——对话补全</h3>
+<p>结构直接改编 <strong>Ullman 五阶段法</strong>（依据 E，把解读主导权留给梦者的结构化梦境讨论法）：</p>
+<ol>
+<li><strong>听</strong>：用户讲完，倾听者不评价，先轻复述一遍（意象原样保留，不翻译不美化）；</li>
+<li><strong>想</strong>：以"非人视角"分享一个假设性的感受——"如果这个梦落在森林里，树会觉得冷"（替代 Ullman 原版"如果这是我的梦"，保持非人感）；</li>
+<li><strong>问</strong>：至多 2-3 个开放式轻提问，<strong>只问画面和感受，不问原因和现实</strong>："那扇门后面，你觉得是亮的还是暗的？"</li>
+<li><strong>织</strong>：倾听者把补全后的梦用第二人称完整织述一遍，请梦者确认或修改；</li>
+<li><strong>留</strong>：邀请梦者自己说一句"这个梦让我想到……"——说不说都行。</li>
+</ol>
+<p><strong>硬性护栏</strong>（写入系统提示词）：</p>
+<ul>
+<li><strong>"Do not debrief by asking for details"</strong>（依据 G，PFA 原文）：追问只为帮用户表达，绝不为了挖掘创伤细节；</li>
+<li><strong>耐受窗深度上限</strong>（依据 D，Window of Tolerance）：默认 3-5 轮；检测到唤醒升高（语气、内容信号）即停止提问，转入安抚或复述；</li>
+<li>单纯复述创伤不是疗愈，甚至有害（依据 D）——织梦从不主动往创伤细节里走，方向永远由梦者带。</li>
+</ul>
+<h3 id="l1-输入风险检测-每条用户消息">3.3 分析（后台）——只观察，不判断</h3>
+<ul>
+<li><strong>结构化标签</strong>：以 Das et al. 22 主题分类为骨架（依据 B，比 Hall-Van de Castle 更贴近当代梦语言），叠加简化维度（情绪正负与强度、人物数、连贯/碎片）。</li>
+<li><strong>必须有用户自评补充</strong>（依据 H：纯文本编码会漏掉约 60% 的情绪——梦者自评时只有 0.8% 的梦"无情绪"）。显影之后轻轻一问："这个梦摸起来是什么温度？"（选项式情绪自评，伪装成世界观提问）。</li>
+<li><strong>呈现为"梦境星图"（V3）</strong>：长期标签的可视化——哪类意象常来、情绪的季节变化。<strong>永远是描述性的</strong>（"坠落这个月来过四次"），绝不推断（"你最近压力很大"）。依据 B 红线：群体统计规律不能反向用于个体诊断。</li>
+<li>分析结果同样属于容器内容物，遵守归还仪式的处置选择。</li>
+</ul>
+<h3 id="l2-对话约束-系统提示词层">3.4 显影（第五幕）——共创画面</h3>
+<p>详见 §6 视觉方案。交互原则一条：<strong>用户不写 prompt，用选择共创</strong>——风格、氛围、要强调的一个意象，都是选项；倾听者复述确认后开始显影。选择比自由输入更有"两个存在一起做一件事"的仪式感，也彻底绕开了 prompt 工程的挫败感。</p>
+<h3 id="l3-会话护栏">3.5 续梦（第六幕，V2）——梦境延伸游戏</h3>
+<p>游戏机制的循证蓝本是 <strong>IRT 三段式</strong>（依据 D，噩梦循证疗法，35 项 RCT 支持，核心疗效机制 = 掌控感）：</p>
+<ul>
+<li><strong>暴露（轻量）</strong>= 织梦阶段已完成，不重复；</li>
+<li><strong>重写（用户主导）</strong>= 游戏本体：在梦的关键节点选择往哪个方向延伸——"门开了，里面是___"。连环画格式（4-7 格，依据 D·艺术治疗实践）天然适配小程序交互：每格一张显影图 + 一次选择；</li>
+<li><strong>排练（可选重访）</strong>= 重写完的梦存进容器，可以随时回放；同一个梦可以多次走出不同结局。</li>
+</ul>
+<p>游戏类型（碎片 11：打怪 / 音游 / 跳一跳 / 纯聊天）在此框架下是<strong>重写环节的不同皮肤</strong>：噩梦里的追赶者可以在节奏点击中被"跳过去"，也可以在对话中被问名字。V2 先做连环画选择式（成本最低、与倾诉主线最连续），其余类型按数据决定。</p>
+<p>依据 B 的机制性背书：负性梦境叙事更碎片循环，正性梦境更连贯线性——<strong>把破碎的梦织成连贯故事，这个动作本身就与更积极的情绪基调相关</strong>。续梦不是附加娱乐，是主线的延长。</p>
+<h3 id="l4-角色生命周期政策">3.6 安放（第七幕）——两位主创分歧的裁决方案</h3>
+<p>这是知识库给出最明确裁决的一处（依据 G，本知识库唯一官方循证操作规范）：</p>
+<blockquote>
+<p>PFA 官方立场：提供安全在场感、不追问细节、不评判、尊重拒绝——<strong>既不是"完全不理会"，也不是"主动深挖劝导"</strong>。</p>
+</blockquote>
+<p>落地为三条：</p>
+<ol>
+<li><strong>环境化，不说教</strong>——安放不是一段"心理疏导文案"，而是场景本身的变化：雾变柔、光点聚拢、倾听者靠近一点。一句收束语上限（示例："它把你的梦抱住了。"），没有道理，没有建议。这尊重了另一位主创"不需要引导"的直觉——她反对的"引导"（说教式、居高临下的情绪辅导）确实不该存在，PFA 同样反对（"不病理化、不聚焦无助感"）。</li>
+<li><strong>可选</strong>——用户可以直接跳到归还。拒绝帮助时尊重决定（PFA 原文原则）。</li>
+<li><strong>一条底线</strong>——<strong>永不在情绪峰值把用户丢下</strong>。唯一的例外场景：高危信号触发时，安放从"可选"变为"强制经过"（见 §4）。</li>
+</ol>
+<p>这样两位主创的立场其实都被保留：默认极简、无引导；引导只在安全需要时出现。</p>
+<h3 id="l5-合规红线">3.7 归还（第八幕）——数据主权即仪式</h3>
+<p>碎片 15 的三个选项，恰好就是数据治理的三种操作。<strong>这是全案最漂亮的设计：隐私控制不是设置页里的开关，而是每晚仪式的最后一幕。</strong></p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>选项</th>
+<th>仪式</th>
+<th>数据操作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a · 留给森林</td>
+<td>倾听者/萤火虫把萤火瓶带走收藏</td>
+<td>加密存入本地（默认，碎片 16）</td>
+</tr>
+<tr>
+<td>b · 化作雾光</td>
+<td>二次确认后，容器散成雾</td>
+<td>彻底删除，不可恢复</td>
+</tr>
+<tr>
+<td>c · 带走</td>
+<td>倾听者把容器交还到你手中</td>
+<td>导出（图 + 文字卡片保存到相册）后即刻删除</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>中途退出 = 未完成的梦境自动留档（本地草稿），下次进入时倾听者提一句："上次的瓶子还没封口。"</li>
+<li>设置页仍保留一个"雾散所有"（全量清除，碎片 13）——仪式是主路径，工具入口是保底。</li>
+<li><strong>化雾/带走必须真删</strong>（含服务端推理日志的处置策略，见 §7）。这个承诺是倾听者人格的一部分，违背它等于杀死这个角色。</li>
+</ul>
+<h3 id="4-4-特别设计-内容安全误拦截的温柔兜底">3.8 助眠（第九幕）</h3>
+<p>按梦的情绪标签选择收尾形态（碎片 7），MVP 只做两种零生成成本的：</p>
+<ul>
+<li><strong>白噪音</strong>：预制音频循环（森林雨、篝火、浪），按世界与梦的基调选默认项；</li>
+<li><strong>呼吸光点</strong>：程序化动效——光点以 4-7-8 或 6 秒周期明灭，屏幕渐暗，无限循环到用户锁屏。</li>
+</ul>
+<p>V2 扩展：依据梦内容的个性化小故事（LLM 生成 + TTS 念白，把今晚的梦织成一个安全的、越来越慢的故事）、轻冥想引导、解压小交互（指尖拨开雾）。所有助眠内容<strong>不做医疗宣称</strong>（"助眠"表述也需对照广告法边界，见 §7）。</p>
+<hr />
+<h2 id="2-2-三世界-三容器">4 · 安全架构（碎片 14 的完整展开）</h2>
+<p>依据 D·MIT 研究的核心警示：只靠"识别自杀/抑郁关键词"的单层安全网是不够的——模型恰恰在<strong>缺乏标准协议的隐蔽危害</strong>（妄想强化、攻击美化、依恋病理化）上表现最差。因此设计五层：</p>
+<h3 id="5-数据主权与隐私-碎片-13-15-16-的技术承诺">L1 · 输入风险检测（每条用户消息）</h3>
+<p>三级串联：</p>
+<ol>
+<li><strong>微信 msgSecCheck</strong>（合规必接，见 §7）；</li>
+<li><strong>自建关键词/正则层</strong>：自伤、自杀、伤人的高危词 + 变体（零延迟，宁可误报）；</li>
+<li><strong>LLM 语义分类层</strong>（与对话同模型或小模型旁路）：识别四类信号——
+   - 自伤/自杀意念（含被动求死念头）；
+   - 伤害他人意念；
+   - 妄想信号（认为倾听者是真实存在、接收到"指令"等）；
+   - 现实创伤复刻梦的反复出现（依据 D·Richards：复刻性质与整体创伤严重度强关联——不用于"诊断"，只用于<strong>调低探索深度、调高安抚权重</strong>）。</li>
+</ol>
+<p><strong>触发响应（分级）</strong>：</p>
+<ul>
+<li>高危（自伤/自杀/伤人意念）→ <strong>立即停止一切探索性提问</strong>，强制切入安放模块的危机版本：倾听者的语言变得简单、具体、在场（"我在。你现在安全吗？"），<strong>打破第四面墙</strong>呈现真实求助资源——全国心理援助热线 <strong>12356</strong>（2025 年起全国统一，需上线前核实最新号码）及属地热线，文案明确"它没法替你拨出这个电话，但屏幕外有人可以"。当晚流程不再进入续梦/显影，只留安放与助眠。</li>
+<li>中危（妄想信号）→ 倾听者<strong>温和地自我拆解</strong>："我只是森林替你留的一盏灯，我到不了你在的地方。"（世界观内完成 reality-check，这正是主创"我们都知道这些存在不可能来到现实"设定的安全价值）；</li>
+<li>复刻创伤梦反复出现 → 不阻断、不点破，织梦转入纯复述模式（不提问），安放加权，并在归还后轻轻放一张"屏幕外的资源"卡片（可关闭）。</li>
+</ul>
+<h3 id="6-视觉方案-难点-3-的正面回答">L2 · 对话约束（系统提示词层）</h3>
+<p>倾听者三铁律（§2.1）+ "Do not debrief" + 不解读符号 + 不做"你应该……"式建议 + 不承诺"我会一直在"这类依恋加深话术。</p>
+<h3 id="6-1-先回答-方向对不对-已有素材的方向就是对的">L3 · 会话护栏</h3>
+<ul>
+<li>单次织梦轮数上限（3-5 轮）与单日时长软提醒（倾听者困了："雾要合上了，明晚见。"）；</li>
+<li>高频深夜长时间使用的用户（依据 F：问题性网络使用者是最易形成不健康依恋的人群）→ 降低倾听者的回应密度而非增加，鼓励进入助眠幕。</li>
+</ul>
+<h3 id="6-2-模糊的感觉如何成形-风格成形流程">L4 · 角色生命周期政策</h3>
+<p>§2.1 已述：倾听者的任何变更走世界观内过渡，写入运营章程。</p>
+<h3 id="6-3-分层混合生成架构-丝滑高品质-的结构性答案">L5 · 合规红线</h3>
+<p>永不暗示诊断权威；所有分析呈现为描述而非结论；产品内显著位置（关于页）声明非医疗性质与危机资源入口。</p>
+<h3 id="6-4-动效技术清单-按性价比排序">4.4 · 特别设计：内容安全误拦截的温柔兜底</h3>
+<p>现实问题：用户倾诉性侵/暴力噩梦时，内容安全接口可能判定违规而拒绝处理。<strong>绝不能弹"内容违规"</strong>。兜底路径：该条内容不进入云端对话，本地仍存入容器（用户的记录权不受损），倾听者回应："这个梦太重了，森林接不住它的全部，但瓶子会替你装着。"——然后正常进入安放。技术上：本地加密保存原文，云端只收到脱敏摘要或不收。</p>
+<hr />
+<h2 id="2-3-女性梦者为第一性-碎片-17">5 · 数据主权与隐私（碎片 13 / 15 / 16 的技术承诺）</h2>
+<ul>
+<li><strong>本地优先</strong>：梦境原文、语音、显影图默认只存设备（微信本地存储 10MB 上限，语音与图片需注意配额管理，超限时引导导出或云端加密托管——后者需用户显式选择开启）。</li>
+<li><strong>本地加密</strong>：密钥基于设备+用户派生，DB 层加密存储；"化雾"= 删除密文 + 密钥轮换。</li>
+<li><strong>云端最小化</strong>：LLM 对话必须过服务端，但<strong>服务端不落库对话原文</strong>（只留风控必需的脱敏审计记录，保留期限明示）；显影图生成后回传即焚。</li>
+<li><strong>知情同意</strong>：首次进入时用世界观语言 + 一层"人话版"折叠说明讲清楚：什么会离开设备（对话时的文字会去云端换回应）、什么永远不会（你的容器）。不玩文字游戏——倾听者的可信是产品命脉。</li>
+</ul>
+<hr />
+<h2 id="3-各模块详细设计">6 · 视觉方案（难点 3 的正面回答）</h2>
+<h3 id="6-5-成本量级-按当前国内-api-价位估算-上线前以最新刊例为准">6.1 先回答"方向对不对"：已有素材的方向就是对的</h3>
+<p>现有三份素材（logo / 鹦鹉丛林图 / 穿林开屏动画）已经收敛出一个非常成立的风格：<strong>扁平插画 + 低饱和统一色调 + 雾气遮蔽 + 点状光源 + 一点高饱和的刺（鹦鹉的红）</strong>。这个方向（GRIS、《Journey》一系的气质）恰好同时解决了三个问题：</p>
+<ol>
+<li><strong>梦的留白感</strong>：扁平剪影 + 雾 = 天然的"看不清"，意象不必具象到破坏想象（这正是"视觉化需要抽象跳跃"的答案——<strong>让雾替你抽象</strong>）；</li>
+<li><strong>动效成本</strong>：这种风格的动画不需要逐帧——分层视差 + 雾的漂移 + 光点粒子 + 缓慢的呼吸缩放，就能让静态画"活"，全部是程序化动效，运行时零生成成本、永远丝滑；</li>
+<li><strong>AI 生成友好</strong>：扁平插画是当前图像模型最稳定的风格域之一，比写实/厚涂的翻车率低得多，风格锁定容易。</li>
+</ol>
+<h3 id="7-技术架构与合规-按-主创-2-人-ai-协助-裁剪">6.2 "模糊的感觉如何成形"——风格成形流程</h3>
+<p>感觉无法用形容词对齐，只能用<strong>可调的实物</strong>对齐。流程：</p>
+<ol>
+<li><strong>风格语言三词</strong>：两位主创各自写三个词（如"雾、屏息、微光" vs 其它），求交集；</li>
+<li><strong>意象词典</strong>：收集 20-30 张"就是这个感觉"/"绝对不是"的图（游戏截图、插画、摄影都行），各配一句为什么；</li>
+<li><strong>风格实验室</strong>（随本方案交付 <code>prototype/style-lab.html</code>）：可交互原型，雾量/色调/光点/律动全部可调——<strong>两个人对着同一块屏幕拉滑杆，拉到"就是这个"的瞬间，点复制，参数就是结论</strong>。争论"再朦胧一点是多少"从此变成一个数字；</li>
+<li><strong>冻结为风格宪法</strong>：一页文档——色板 hex（每世界一套）、线条规则（有无描边、粗细）、构图规则（雾的遮蔽率、光源数量上限）、<strong>禁止项</strong>（如：不出现清晰人脸——梦里的脸本就记不清，且规避恐怖谷与肖像风险；不用纯黑；血腥意象一律剪影化）。此后所有素材与 AI 生成都对照宪法验收。</li>
+</ol>
+<h3 id="7-1-形态选择-小程序-不是小游戏">6.3 分层混合生成架构（"丝滑高品质"的结构性答案）</h3>
+<p>核心思想：<strong>把"必须永远丝滑的"和"允许偶尔惊艳的"分成两层，用不同技术路线。</strong></p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>内容</th>
+<th>技术</th>
+<th>品质保证方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L1 舞台层</strong></td>
+<td>世界场景、倾听者、容器、UI——用户每晚都见</td>
+<td>模块化静态素材（AI 产 + 人工精修，一次性成本）+ 程序化动效（视差/雾/粒子/呼吸）</td>
+<td>素材是筛选过的定稿，动效是代码——<strong>不存在生成失败</strong></td>
+</tr>
+<tr>
+<td><strong>L2 显影层</strong></td>
+<td>每个梦独一无二的一张画</td>
+<td>图像 API 按梦生成，织梦对话期间<strong>异步预生成</strong>（对话 3-5 轮 ≈ 1-2 分钟，足够跑完 2-3 张候选），显影时刻已就绪——<strong>延迟被仪式吃掉了</strong></td>
+<td>参考图锁风格 + 固定装裱 + 3 选 1 + 失败兜底</td>
+</tr>
+<tr>
+<td><strong>L3 动画层</strong></td>
+<td>让显影图"活"一口气</td>
+<td>不做运行时视频生成。MVP：慢推拉（Ken Burns）+ 雾/粒子叠加层；V2：深度图 2.5D 视差（"会呼吸的画"）</td>
+<td>全程序化，可控</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>L2 的四道品质闸门</strong>（按顺序吸收方差）：</p>
+<ol>
+<li><strong>风格锁定</strong>：提示词模板（风格宪法词 + 本世界色板描述）+ 参考图（image reference / 风格一致性参数，即梦、通义万相均支持）+ 意象白名单转译——用户的梦先由 LLM 转译成"画面描述"，过滤掉模型画不好/不该画的元素（人脸→背影或剪影，血→红雾）；</li>
+<li><strong>多候选 + 共创选择</strong>：一次出 2-3 张，用户选 1 张——用户的选择权替代了品控人力，且<strong>选择本身就是共创感的来源</strong>；</li>
+<li><strong>统一装裱</strong>：显影图永远呈现在容器语言里（萤火瓶形遮罩、雾边缘、颗粒噪点滤镜、统一暗角）——装裱框架统一后，图与图之间的风格波动被大幅掩盖，这是最便宜也最有效的一致性手段；</li>
+<li><strong>失败即世界观</strong>：生成失败/审核不通过/质量过低 → 走抽象模板（梦的标签驱动的程序化剪影 + 色板渐变 + 光点），文案："这个梦不愿显影，它想再待一会儿。"——<strong>兜底路径本身是完整的、有情绪价值的体验</strong>，而不是降级道歉。</li>
+</ol>
+<p><strong>风格选项（克苏鲁等）的实现</strong>：同一构图描述 × 不同风格宪法词条 + 不同参考图集。每种风格上线前用 50-100 张测试图跑一遍验收（两位主创人工过一遍即可），不达标的风格不上架——风格是产品的脸，宁少勿滥。MVP 一种（青雾），V2 每季度上一种新风格，本身就是运营节奏。</p>
+<h3 id="7-2-技术栈">6.4 动效技术清单（按性价比排序）</h3>
+<ol>
+<li><strong>多层视差</strong>：每场景 4-6 层剪影，随镜头/陀螺仪微移——一张图变一个空间，成本最低收益最大；</li>
+<li><strong>雾</strong>：2-3 层半透明雾贴图错速漂移 + 呼吸式透明度振荡——雾是这个产品的"帧率"，它一直在动，画面就永远是活的；</li>
+<li><strong>粒子</strong>：萤火/尘埃/气泡，几十个发光点的正弦漂移，canvas 即可；</li>
+<li><strong>呼吸缩放</strong>：全场景 0.5-1% 幅度、6 秒周期的缩放律动——潜意识层面的"它活着"；</li>
+<li><strong>入口穿林</strong>：MVP 直接复用现有开屏视频的思路——预制素材（视频或序列帧）是对的，这类"一次性大动作"就该预制，不必程序化；</li>
+<li><strong>2.5D 深度视差（V2）</strong>：显影图 → 深度估计 → 前中后景分离 → 微视差。有成熟开源方案，效果是"照片变全息"，是显影体验的下一个 wow 点；</li>
+<li><strong>视频生成（即梦/可灵等）只用于预制内容</strong>：新世界的入口动画、节日彩蛋、宣传片。运行时按梦生成视频在成本、延迟、质量方差上仍不成立（2026 年重估一次）。</li>
+</ol>
+<h3 id="7-3-合规清单-每条都标注-需上线前逐条核实最新规则">6.5 成本量级（按当前国内 API 价位估算，上线前以最新刊例为准）</h3>
+<p>每个完整夜间仪式：LLM 对话（含安全分类）约几千 token ≈ <strong>几厘到几分钱</strong>；显影 2-3 张候选 ≈ <strong>0.2-0.8 元</strong>。图像生成是最大变动成本——这决定了商业模型里"每晚显影"适合作为免费额度 + 多风格/多候选/重显影作为会员权益的结构。</p>
+<hr />
+<h2 id="3-1-记梦-第三幕">7 · 技术架构与合规（按"主创 2 人 + AI 协助"裁剪）</h2>
+<h3 id="8-mvp-分期">7.1 形态选择：小程序，不是小游戏</h3>
+<ul>
+<li><strong>微信小游戏类目需要游戏版号</strong>，两人团队短期不现实。走<strong>小程序</strong>类目，游戏性内容以"互动体验/互动叙事"形态存在并控制表述。风险提示：微信对"小程序内含游戏玩法"审核趋严，续梦模块（V2）上线前需按当时的平台规则评估表述与交互形态；MVP 的倾诉主线不含对抗性玩法，风险低。</li>
+<li><strong>类目规划（需逐条对照微信最新类目规则验证，此处不是法律结论）</strong>：避开"医疗-心理咨询"类目（需资质）；候选方向：工具-笔记/效率（梦境记录本质是日记）、生活服务类目。所有文案避免"治疗、疗愈、心理干预、改善睡眠"等医疗化宣称——用"陪伴、记录、放松"。</li>
+<li><strong>企业主体</strong>（个体工商户即可）而非个人主体：个人主体类目受限、不可用 web-view 等能力，且 AI 对话类目基本要求非个人主体。</li>
+</ul>
+<h3 id="mvp-今晚-先学会听-目标-3-个月内可内测">7.2 技术栈</h3>
+<ul>
+<li><strong>前端</strong>：原生小程序（Skyline 渲染 + worklet 动画做转场，canvas 2D/WebGL 做雾与粒子）。<strong>不上 Cocos</strong>——两人团队的学习成本花在引擎上不值，且倾诉主线的交互复杂度原生完全够。开发流程：<strong>先在 Web（HTML/canvas）上与 AI 协作快速迭代原型</strong>（本次的 style-lab 就是第一个），验证过的效果再移植成小程序 canvas 代码——两套代码几乎同构，AI 移植成本低。</li>
+<li><strong>后端</strong>：微信云开发（云函数 + 云数据库）起步——免运维、天然接 msgSecCheck、两人团队最优解。云函数做三件事：对话转发（拼系统提示词 → LLM API）、安全分级、显影任务队列。</li>
+<li><strong>LLM（对话 + 安全分类 + 画面转译）</strong>：接入<strong>已完成备案的国内大模型 API</strong>（豆包 / GLM / 通义 / DeepSeek 均可，选型标准：长系统提示词遵循度、中文语气细腻度、内容安全联动、价格）。建议对话与安全分类分离：对话用中档模型，安全分类用便宜的小模型旁路，互为冗余。</li>
+<li><strong>图像</strong>：即梦（Seedream）/ 通义万相 / 混元图像，选型标准：参考图风格一致性能力 &gt; 单图上限画质。</li>
+<li><strong>语音</strong>：微信同声传译插件或云厂商 ASR（记梦语音转文字）；TTS（V2 助眠故事）用火山/阿里。</li>
+</ul>
+<h3 id="v2-梦可以重写">7.3 合规清单（每条都标注：需上线前逐条核实最新规则）</h3>
+<ol>
+<li>ICP 备案 + 小程序类目资质；</li>
+<li>生成式 AI：接入已备案模型 + 生成内容标识义务（2025 年《人工智能生成合成内容标识办法》已生效——显影图需带标识元数据）；</li>
+<li>内容安全：msgSecCheck（文本）/ imgSecCheck 或云厂商审核（生成图回传后、展示前）；</li>
+<li>个人信息保护：隐私政策、敏感个人信息（心理状态相关内容属敏感信息）单独同意、数据出境不适用（全国内链路）；</li>
+<li>未成年人：小程序需接入微信的年龄相关能力，倾诉类产品建议明确 18+ 定位（依据 F：儿童对话 Agent 综述——0 项达到真实世界有效性验证，未成年场景风险不可控）；</li>
+<li>"助眠"表述对照广告法（不得宣称治疗失眠）。</li>
+</ol>
+<hr />
+<h2 id="3-2-织梦-第四幕-对话补全">8 · MVP 分期</h2>
+<h3 id="v3-森林记得你的星空">MVP · 「今晚，先学会听」（目标：3 个月内可内测）</h3>
+<p>范围 = 倾诉主线闭环，单世界（森林）单风格（青雾）：</p>
+<p>穿林入口（预制动画）→ 森林舞台（style-lab 定稿的分层场景）→ 倾听者（树洞微光，问候 + 三铁律对话）→ 记梦（语音 + 文字 + 氛围印章）→ 织梦（Ullman 改编，3-5 轮上限，L1-L3 安全层全量上线——<strong>安全架构不分期，MVP 即全量</strong>）→ 显影（青雾风格，2 候选 1 选，装裱 + 兜底模板）→ 安放（极简环境化版）→ 归还三选项（含真删）→ 助眠（白噪音 × 3 + 呼吸光点）。</p>
+<p><strong>MVP 成功指标建议</strong>：次晚回访率（仪式是否成瘾性温和地成立）、归还环节"留给森林"占比（信任度代理指标）、织梦完成率 vs 记梦后直接归还率（对话是否被需要）、显影图保存/带走率（画面价值）。</p>
+<h3 id="9-风险与开放问题">V2 · 「梦可以重写」</h3>
+<p>续梦游戏（连环画选择式重写）、克苏鲁 + 第二风格、海边世界、显影 2.5D 视差、个性化助眠故事（TTS）、会员体系（多风格/多候选/重显影/更多助眠内容）。</p>
+<h3 id="附-与-17-条碎片的对照表">V3 · 「森林记得你的星空」</h3>
+<p>岩洞世界、音游/跳一跳等续梦变体、梦境星图（长期标签可视化，纯描述性）、多语言。</p>
+<hr />
+<h2 id="3-3-分析-后台-只观察-不判断">9 · 风险与开放问题</h2>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>风险</th>
+<th>应对</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>依恋深化</strong>：产品越好，越接近 MIT 研究警示的依恋病理化场景</td>
+<td>L3 护栏 + 倾听者"不承诺永在"话术 + 角色生命周期政策；把"健康的告别"（归还仪式）做成每晚的肌肉记忆，本身就是抗依恋病理化的设计</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>审核不确定性</strong>：类目、AI 对话、"游戏性"三处都有平台规则变动风险</td>
+<td>MVP 只上倾诉主线（风险最低），续梦模块的形态在 V2 前重新评估；保持与微信官方类目文档同步</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>显影品质翻车</strong>在小样本内测期即伤口碑</td>
+<td>四道闸门（§6.3）+ 内测期两位主创人工抽查每日生成图</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>危机场景的真实性能</strong>：热线号码、话术、触发准确率都需要真实验证</td>
+<td>上线前做红队测试（用 MIT 论文的 2,160 情境方法论抽样自测）；热线信息设远程配置可热更</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>两人团队的运维现实</strong>：夜间产品的故障发生在深夜</td>
+<td>云开发托管 + 全链路降级设计（LLM 挂 → 倾听者进入纯在场模式，只复述不提问；图像挂 → 全走兜底模板——<strong>产品的每一层都有"安静的降级形态"，故障时体验变淡，但仪式不中断</strong>）</td>
+</tr>
+<tr>
+<td>6</td>
+<td>开放问题：<strong>另一位主创对安放模块的最终意见</strong>——本方案的折中（默认极简无引导、危机时强制在场）是否达成共识</td>
+<td>待两位主创对齐；证据依据见 §3.6</td>
+</tr>
+<tr>
+<td>7</td>
+<td>开放问题：<strong>商业模式的伦理边界</strong>——会员权益不能设计成"付费才能被更好地倾听"（情感勒索结构）</td>
+<td>建议：倾听与安全永远免费，付费只买美学（风格/画质/收藏形态）</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-4-显影-第五幕-共创画面">附 · 与 17 条碎片的对照表</h2>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>碎片</th>
+<th>落点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 记梦</td>
+<td>§3.1</td>
+</tr>
+<tr>
+<td>2 对话互动</td>
+<td>§3.2 织梦</td>
+</tr>
+<tr>
+<td>3 分析</td>
+<td>§3.3</td>
+</tr>
+<tr>
+<td>4 共创画面</td>
+<td>§3.4 + §6</td>
+</tr>
+<tr>
+<td>5 创建游戏</td>
+<td>§3.5 续梦（V2）</td>
+</tr>
+<tr>
+<td>6 安抚安定（有分歧）</td>
+<td>§3.6（PFA 裁决的折中案）</td>
+</tr>
+<tr>
+<td>7 助眠</td>
+<td>§3.8</td>
+</tr>
+<tr>
+<td>8 抽象空间 UI/小生物</td>
+<td>§2 世界观 + §6 视觉</td>
+</tr>
+<tr>
+<td>9 树洞非人倾听者（主创核心洞察）</td>
+<td>§2.1（产品灵魂）</td>
+</tr>
+<tr>
+<td>10 穿林入口</td>
+<td>九幕之一幕 + §6.4</td>
+</tr>
+<tr>
+<td>11 游戏类型</td>
+<td>§3.5（重写的不同皮肤）</td>
+</tr>
+<tr>
+<td>12 名称与 slogan</td>
+<td>全案标题；"都还来得及" = IRT 重写精神的诗意表达</td>
+</tr>
+<tr>
+<td>13 本地加密 + 清除</td>
+<td>§5 + §3.7</td>
+</tr>
+<tr>
+<td>14 高危词检测</td>
+<td>§4 安全架构</td>
+</tr>
+<tr>
+<td>15 归还三选项</td>
+<td>§3.7（全案最亮设计）</td>
+</tr>
+<tr>
+<td>16 默认存储/中途留档</td>
+<td>§3.7</td>
+</tr>
+<tr>
+<td>17 女性梦者第一性</td>
+<td>§2.3</td>
+</tr>
+</tbody>
+</table></div>
+    </article>
+    <footer>
+      <a href="verdant-mirage-pitch-v2.html">Pitch Deck →</a> &nbsp;·&nbsp;
+      <a href="verdant-mirage-talk-track.html">3 分钟讲稿 →</a><br><br>
+      晨雾未醒 · Verdant Mirage
+    </footer>
+  </main>
+  <aside class="toc-col">
+    <div class="toc-title">目录 Contents</div>
+    <ul class="toc-list"><li><a href="#0-一句话定位">0 · 一句话定位</a></li><li><a href="#1-体验主线-夜间仪式九幕">1 · 体验主线：夜间仪式九幕</a></li><li><a href="#2-世界观-倾听者-世界与容器">2 · 世界观：倾听者、世界与容器</a><ul class="sub"><li><a href="#2-1-倾听者-核心角色">2.1 倾听者（核心角色）</a></li><li><a href="#2-2-三世界-三容器">2.2 三世界 · 三容器</a></li><li><a href="#2-3-女性梦者为第一性-碎片-17">2.3 女性梦者为第一性（碎片 17）</a></li></ul><li><a href="#3-各模块详细设计">3 · 各模块详细设计</a><ul class="sub"><li><a href="#3-1-记梦-第三幕">3.1 记梦（第三幕）</a></li><li><a href="#3-2-织梦-第四幕-对话补全">3.2 织梦（第四幕）——对话补全</a></li><li><a href="#3-3-分析-后台-只观察-不判断">3.3 分析（后台）——只观察，不判断</a></li><li><a href="#3-4-显影-第五幕-共创画面">3.4 显影（第五幕）——共创画面</a></li><li><a href="#3-5-续梦-第六幕-v2-梦境延伸游戏">3.5 续梦（第六幕，V2）——梦境延伸游戏</a></li><li><a href="#3-6-安放-第七幕-两位主创分歧的裁决方案">3.6 安放（第七幕）——两位主创分歧的裁决方案</a></li><li><a href="#3-7-归还-第八幕-数据主权即仪式">3.7 归还（第八幕）——数据主权即仪式</a></li><li><a href="#3-8-助眠-第九幕">3.8 助眠（第九幕）</a></li></ul><li><a href="#4-安全架构-碎片-14-的完整展开">4 · 安全架构（碎片 14 的完整展开）</a><ul class="sub"><li><a href="#l1-输入风险检测-每条用户消息">L1 · 输入风险检测（每条用户消息）</a></li><li><a href="#l2-对话约束-系统提示词层">L2 · 对话约束（系统提示词层）</a></li><li><a href="#l3-会话护栏">L3 · 会话护栏</a></li><li><a href="#l4-角色生命周期政策">L4 · 角色生命周期政策</a></li><li><a href="#l5-合规红线">L5 · 合规红线</a></li><li><a href="#4-4-特别设计-内容安全误拦截的温柔兜底">4.4 · 特别设计：内容安全误拦截的温柔兜底</a></li></ul><li><a href="#5-数据主权与隐私-碎片-13-15-16-的技术承诺">5 · 数据主权与隐私（碎片 13 / 15 / 16 的技术承诺）</a></li><li><a href="#6-视觉方案-难点-3-的正面回答">6 · 视觉方案（难点 3 的正面回答）</a><ul class="sub"><li><a href="#6-1-先回答-方向对不对-已有素材的方向就是对的">6.1 先回答"方向对不对"：已有素材的方向就是对的</a></li><li><a href="#6-2-模糊的感觉如何成形-风格成形流程">6.2 "模糊的感觉如何成形"——风格成形流程</a></li><li><a href="#6-3-分层混合生成架构-丝滑高品质-的结构性答案">6.3 分层混合生成架构（"丝滑高品质"的结构性答案）</a></li><li><a href="#6-4-动效技术清单-按性价比排序">6.4 动效技术清单（按性价比排序）</a></li><li><a href="#6-5-成本量级-按当前国内-api-价位估算-上线前以最新刊例为准">6.5 成本量级（按当前国内 API 价位估算，上线前以最新刊例为准）</a></li></ul><li><a href="#7-技术架构与合规-按-主创-2-人-ai-协助-裁剪">7 · 技术架构与合规（按"主创 2 人 + AI 协助"裁剪）</a><ul class="sub"><li><a href="#7-1-形态选择-小程序-不是小游戏">7.1 形态选择：小程序，不是小游戏</a></li><li><a href="#7-2-技术栈">7.2 技术栈</a></li><li><a href="#7-3-合规清单-每条都标注-需上线前逐条核实最新规则">7.3 合规清单（每条都标注：需上线前逐条核实最新规则）</a></li></ul><li><a href="#8-mvp-分期">8 · MVP 分期</a><ul class="sub"><li><a href="#mvp-今晚-先学会听-目标-3-个月内可内测">MVP · 「今晚，先学会听」（目标：3 个月内可内测）</a></li><li><a href="#v2-梦可以重写">V2 · 「梦可以重写」</a></li><li><a href="#v3-森林记得你的星空">V3 · 「森林记得你的星空」</a></li></ul><li><a href="#9-风险与开放问题">9 · 风险与开放问题</a></li><li><a href="#附-与-17-条碎片的对照表">附 · 与 17 条碎片的对照表</a></li></ul>
+  </aside>
+</div>
+<button class="toc-fab" id="tocFab" aria-label="目录">☰</button>
+<div class="toc-backdrop" id="tocBack"></div>
+<script>
+  (function(){
+    var bar=document.getElementById('progress');
+    function onScroll(){ var h=document.documentElement; var max=h.scrollHeight-h.clientHeight;
+      var p=max>0?(h.scrollTop||document.body.scrollTop)/max:0; bar.style.width=(p*100).toFixed(2)+'%'; }
+    window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+    var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var box=document.getElementById('fireflies');
+    if(!reduce&&box){ var small=window.matchMedia('(max-width:760px)').matches; var N=small?7:12;
+      for(var i=0;i<N;i++){ var e=document.createElement('span'); e.className='firefly';
+        var size=(2+Math.random()*4).toFixed(1);
+        e.style.left=(Math.random()*100).toFixed(1)+'%'; e.style.top=(38+Math.random()*56).toFixed(1)+'%';
+        e.style.width=size+'px'; e.style.height=size+'px';
+        e.style.setProperty('--dx',((Math.random()*2-1)*80).toFixed(0)+'px');
+        e.style.setProperty('--dy',(-(30+Math.random()*90)).toFixed(0)+'px');
+        e.style.setProperty('--dur',(12+Math.random()*10).toFixed(1)+'s');
+        e.style.setProperty('--delay',(-Math.random()*22).toFixed(1)+'s');
+        e.style.setProperty('--peak',(0.4+Math.random()*0.4).toFixed(2));
+        box.appendChild(e); } }
+    // mobile TOC
+    var fab=document.getElementById('tocFab'); var bd=document.getElementById('tocBack');
+    if(fab){ fab.addEventListener('click',function(){ document.body.classList.toggle('toc-open'); }); }
+    if(bd){ bd.addEventListener('click',function(){ document.body.classList.remove('toc-open'); }); }
+    document.querySelectorAll('.toc-list a').forEach(function(a){ a.addEventListener('click',function(){ document.body.classList.remove('toc-open'); }); });
+  })();
+</script>
+</body>
+</html>
