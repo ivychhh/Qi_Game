@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>晨雾未醒 Verdant Mirage · Pitch</title>
+  <style>
+    :root {
+      /* ---- fonts ---- */
+      --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
+      --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+
+      /* ---- fixed decorative accents (not day/night interpolated) ---- */
+      --plume-g: 143 190 108;
+      --plume-o: 232 145 60;
+
+      /* ---- day/night interpolated tokens (as "r g b" triples) ----
+         defaults below = DAWN (day). JS overwrites these on scroll. */
+      --bg-a: 250 236 212;
+      --bg-b: 240 230 216;
+      --bg-c: 224 224 210;
+      --ink: 43 54 66;
+      --ink-soft: 86 96 104;
+      --ink-dim: 130 138 144;
+      --accent: 176 88 50;
+      --line: 92 80 68;
+      --panel: 120 110 96;
+      --foliage-far: 158 176 146;
+      --foliage-mid: 128 156 114;
+      --foliage-near: 104 138 92;
+      --branch: 176 96 68;
+      --berry: 178 80 96;
+      --glow-warm: 248 210 150;
+      --glow-cool: 214 204 222;
+      /* scalars */
+      --glow: .05;
+      --mist: 1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background: rgb(var(--bg-b));
+      color: rgb(var(--ink));
+      font-family: var(--sans);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background .2s linear;
+    }
+
+    /* ---------------- Atmospheric backdrop ---------------- */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .backdrop::after {
+      /* vignette + glows + sky gradient */
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(48% 42% at 22% 82%, rgb(var(--glow-warm) / .28), transparent 70%),
+        radial-gradient(40% 38% at 74% 20%, rgb(var(--line) / .12), transparent 70%),
+        radial-gradient(55% 50% at 88% 78%, rgb(var(--glow-cool) / .20), transparent 72%),
+        linear-gradient(160deg, rgb(var(--bg-a)) 0%, rgb(var(--bg-b)) 45%, rgb(var(--bg-c)) 100%);
+    }
+
+    .scene {
+      position: absolute;
+      inset: -2% -2%;
+      width: 104%;
+      height: 104%;
+      z-index: 1;
+    }
+
+    /* ---- SVG layer colours (driven by day/night tokens) ---- */
+    .foliage-far { fill: rgb(var(--foliage-far)); stroke: rgb(var(--foliage-far)); }
+    .foliage-mid { fill: rgb(var(--foliage-mid)); stroke: rgb(var(--foliage-mid)); }
+    .foliage-near { fill: rgb(var(--foliage-near)); stroke: rgb(var(--foliage-near)); }
+    .branches { stroke: rgb(var(--branch)); }
+    .berries { fill: rgb(var(--berry)); }
+
+    /* ---- daytime dreamy mist haze (fades out at night) ---- */
+    .mist-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: var(--mist);
+      background:
+        radial-gradient(62% 44% at 50% 26%, rgba(255, 250, 240, .38), transparent 72%),
+        linear-gradient(180deg, rgba(255, 248, 236, .28), transparent 42%);
+      mix-blend-mode: screen;
+    }
+
+    /* ---- fireflies / dream motes (fade in toward night via --glow) ---- */
+    .fireflies {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      opacity: var(--glow);
+    }
+
+    .firefly {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 244, 200, .95), rgba(255, 214, 120, .55) 42%, transparent 72%);
+      filter: blur(.3px);
+      opacity: 0;
+      animation: drift var(--dur, 16s) ease-in-out var(--delay, 0s) infinite;
+      will-change: transform, opacity;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) scale(.6); opacity: 0; }
+      14% { opacity: var(--peak, .8); }
+      50% { transform: translate(var(--dx, 40px), var(--dy, -60px)) scale(1); opacity: var(--peak, .8); }
+      82% { opacity: calc(var(--peak, .8) * .45); }
+      100% { transform: translate(calc(var(--dx, 40px) * .4), calc(var(--dy, -60px) * 1.4)) scale(.7); opacity: 0; }
+    }
+
+    /* ---- slow layer sway (barely perceptible) ---- */
+    .foliage-near {
+      transform-box: view-box;
+      transform-origin: 50% 100%;
+      animation: swayA 13s ease-in-out infinite;
+    }
+
+    .foliage-mid {
+      transform-box: view-box;
+      transform-origin: 50% 100%;
+      animation: swayB 18s ease-in-out infinite;
+    }
+
+    @keyframes swayA {
+      0%, 100% { transform: rotate(-.35deg); }
+      50% { transform: rotate(.35deg); }
+    }
+
+    @keyframes swayB {
+      0%, 100% { transform: rotate(.3deg); }
+      50% { transform: rotate(-.3deg); }
+    }
+
+    /* ---- inconspicuous little creature ---- */
+    .critter-in {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: critter 16s ease-in-out infinite;
+    }
+
+    @keyframes critter {
+      0%, 55%, 100% { transform: translate(0, 0) rotate(0); }
+      60% { transform: translate(2px, -1.5px) rotate(-6deg); }
+      68% { transform: translate(3px, -1px) rotate(2deg); }
+      74% { transform: translate(1px, 0) rotate(0); }
+    }
+
+    /* ---- vessel glows + sparkles, modulated by --glow ---- */
+    .vessels { opacity: var(--glow); }
+    .sparkles { opacity: calc(var(--glow) * .9); }
+
+    .spark {
+      animation: tw 5s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .spark:nth-child(2n) { animation-duration: 7s; animation-delay: 1.4s; }
+    .spark:nth-child(3n) { animation-duration: 6s; animation-delay: .7s; }
+
+    @keyframes tw {
+      0%, 100% { opacity: .2; transform: scale(.7); }
+      50% { opacity: .95; transform: scale(1.15); }
+    }
+
+    .vessel {
+      animation: rise 20s linear infinite;
+      transform-origin: center;
+    }
+
+    .vessel:nth-child(2) { animation-duration: 26s; animation-delay: 6s; }
+    .vessel:nth-child(3) { animation-duration: 23s; animation-delay: 11s; }
+
+    @keyframes rise {
+      0% { transform: translateY(60px); opacity: 0; }
+      12% { opacity: .9; }
+      85% { opacity: .7; }
+      100% { transform: translateY(-140px); opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      .spark, .vessel, .firefly,
+      .foliage-near, .foliage-mid,
+      .critter-in {
+        animation: none;
+      }
+      .firefly { opacity: 0; }
+    }
+
+    /* ---------------- Deck ---------------- */
+    .deck {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      height: 100vh;
+      height: 100dvh;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+    }
+
+    .deck::-webkit-scrollbar {
+      display: none;
+    }
+
+    .slide {
+      position: relative;
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(28px, 6vw, 120px);
+    }
+
+    .inner {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: clamp(.62rem, 1.1vw, .8rem);
+      letter-spacing: .34em;
+      text-transform: uppercase;
+      color: rgb(var(--accent));
+      margin-bottom: clamp(18px, 2.4vw, 30px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 26px;
+      height: 1px;
+      background: linear-gradient(90deg, rgb(var(--accent)), transparent);
+    }
+
+    .eyebrow.tag-new::after {
+      content: "NEW";
+      font-size: .58rem;
+      letter-spacing: .16em;
+      color: rgb(var(--bg-c));
+      background: rgb(var(--accent));
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-weight: 600;
+      line-height: 1.04;
+      letter-spacing: .01em;
+      text-wrap: balance;
+    }
+
+    .display {
+      font-size: clamp(2.6rem, 7.2vw, 5.6rem);
+    }
+
+    .big {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      line-height: 1.16;
+      letter-spacing: .01em;
+      text-wrap: balance;
+      margin-bottom: clamp(20px, 2.6vw, 34px);
+    }
+
+    .en-sub {
+      display: block;
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 500;
+      font-size: clamp(.95rem, 2.4vw, 1.7rem);
+      color: rgb(var(--ink-soft));
+      letter-spacing: .08em;
+      margin-top: clamp(14px, 1.8vw, 22px);
+    }
+
+    .tagline {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: clamp(1.15rem, 2.9vw, 2rem);
+      color: rgb(var(--accent));
+      margin-top: clamp(26px, 3.4vw, 44px);
+      letter-spacing: .03em;
+    }
+
+    .lead {
+      font-size: clamp(1rem, 1.9vw, 1.4rem);
+      line-height: 1.8;
+      color: rgb(var(--ink-soft));
+      max-width: 34em;
+    }
+
+    .lead.wide {
+      max-width: 40em;
+    }
+
+    strong {
+      color: rgb(var(--ink));
+      font-weight: 600;
+    }
+
+    .accent {
+      color: rgb(var(--accent));
+    }
+
+    .footnote {
+      margin-top: clamp(26px, 3vw, 40px);
+      font-size: clamp(.78rem, 1.3vw, .95rem);
+      line-height: 1.7;
+      color: rgb(var(--ink-dim));
+      border-left: 2px solid rgb(var(--accent) / .4);
+      padding-left: 14px;
+      max-width: 38em;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: clamp(26px, 3vw, 40px);
+    }
+
+    .pill {
+      font-family: var(--mono);
+      font-size: clamp(.72rem, 1.3vw, .95rem);
+      letter-spacing: .05em;
+      color: rgb(var(--ink-soft));
+      border: 1px solid rgb(var(--line) / .35);
+      background: rgb(var(--line) / .06);
+      border-radius: 40px;
+      padding: 9px 18px;
+    }
+
+    /* core loop */
+    .loop {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 4px;
+      margin-top: clamp(24px, 3vw, 40px);
+    }
+
+    .loop .node {
+      font-family: var(--serif);
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: rgb(var(--ink));
+      background: rgb(var(--panel) / .12);
+      border: 1px solid rgb(var(--panel) / .3);
+      border-radius: 12px;
+      padding: clamp(8px, 1.2vw, 14px) clamp(12px, 1.8vw, 20px);
+    }
+
+    .loop .node.hot {
+      color: rgb(var(--accent));
+      border-color: rgb(var(--accent) / .5);
+      background: rgb(var(--accent) / .08);
+    }
+
+    .loop .arr {
+      color: rgb(var(--branch));
+      font-size: clamp(1rem, 1.8vw, 1.4rem);
+      padding: 0 2px;
+    }
+
+    /* pillar / choice cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(14px, 1.8vw, 24px);
+      margin-top: clamp(26px, 3.2vw, 44px);
+    }
+
+    .card {
+      background: linear-gradient(165deg, rgb(var(--panel) / .12), rgb(var(--bg-c) / .18));
+      border: 1px solid rgb(var(--panel) / .26);
+      border-radius: 18px;
+      padding: clamp(18px, 2.2vw, 30px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card .vk {
+      font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+      margin-bottom: 14px;
+      display: block;
+      line-height: 1;
+    }
+
+    .card h3 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(1.1rem, 1.9vw, 1.5rem);
+      margin-bottom: 10px;
+      color: rgb(var(--ink));
+    }
+
+    .card p {
+      font-size: clamp(.82rem, 1.3vw, 1rem);
+      line-height: 1.7;
+      color: rgb(var(--ink-soft));
+    }
+
+    .card .kv {
+      font-family: var(--mono);
+      font-size: .62rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: rgb(var(--ink-dim));
+      margin-bottom: 12px;
+    }
+
+    .card.leave { border-color: rgb(var(--plume-g) / .32); }
+    .card.leave .vk { color: rgb(var(--plume-g)); }
+    .card.mist { border-color: rgb(var(--line) / .3); }
+    .card.mist .vk { color: rgb(var(--ink-soft)); }
+    .card.take { border-color: rgb(var(--plume-o) / .34); }
+    .card.take .vk { color: rgb(var(--plume-o)); }
+
+    @media (max-width:760px) {
+      .cards {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+
+    .points {
+      list-style: none;
+      margin-top: clamp(22px, 2.6vw, 36px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 1.5vw, 18px);
+    }
+
+    .points li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      font-size: clamp(.95rem, 1.6vw, 1.25rem);
+      line-height: 1.6;
+      color: rgb(var(--ink-soft));
+    }
+
+    .points li::before {
+      content: "";
+      flex: none;
+      width: 9px;
+      height: 9px;
+      margin-top: .5em;
+      border-radius: 2px;
+      background: rgb(var(--accent));
+      transform: rotate(45deg);
+    }
+
+    .points li b {
+      color: rgb(var(--ink));
+    }
+
+    .stat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: clamp(24px, 4vw, 60px);
+      margin-top: clamp(26px, 3vw, 42px);
+    }
+
+    .stat .n {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(2rem, 4.6vw, 3.4rem);
+      color: rgb(var(--accent));
+      line-height: 1;
+    }
+
+    .stat .l {
+      font-size: clamp(.78rem, 1.3vw, .98rem);
+      color: rgb(var(--ink-soft));
+      margin-top: 8px;
+    }
+
+    .close-line {
+      font-family: var(--mono);
+      font-size: clamp(.72rem, 1.2vw, .9rem);
+      letter-spacing: .14em;
+      color: rgb(var(--ink-dim));
+      margin-top: clamp(30px, 3.4vw, 46px);
+    }
+
+    /* footer + nav */
+    .foot {
+      position: absolute;
+      bottom: clamp(18px, 3vh, 34px);
+      left: clamp(28px, 6vw, 120px);
+      right: clamp(28px, 6vw, 120px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: .66rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgb(var(--ink-dim));
+      z-index: 3;
+    }
+
+    .dots {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 9px;
+      z-index: 6;
+    }
+
+    .dots button {
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgb(var(--line) / .35);
+      cursor: pointer;
+      transition: all .3s;
+    }
+
+    .dots button[aria-current="true"] {
+      background: rgb(var(--accent));
+      transform: scale(1.35);
+    }
+
+    .arrows {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .arrows button {
+      pointer-events: auto;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: clamp(40px, 5vw, 60px);
+      height: clamp(40px, 5vw, 60px);
+      border-radius: 50%;
+      border: 1px solid rgb(var(--line) / .28);
+      background: rgb(var(--bg-c) / .38);
+      color: rgb(var(--ink-soft));
+      font-size: 1.4rem;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: all .25s;
+      opacity: .55;
+    }
+
+    .arrows button:hover {
+      opacity: 1;
+      border-color: rgb(var(--accent));
+      color: rgb(var(--accent));
+    }
+
+    .arrows .prev { left: 14px; }
+    .arrows .next { right: 14px; }
+
+    .hint {
+      position: fixed;
+      bottom: 38px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--mono);
+      font-size: .66rem;
+      letter-spacing: .16em;
+      color: rgb(var(--ink-dim));
+      z-index: 6;
+      animation: fade 5.5s ease forwards;
+    }
+
+    @keyframes fade {
+      0%, 70% { opacity: .7; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+
+    :focus-visible {
+      outline: 2px solid rgb(var(--accent));
+      outline-offset: 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="backdrop" aria-hidden="true">
+    <svg class="scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <symbol id="leaf" viewBox="-40 -62 80 124">
+          <path d="M0,-58 C22,-42 24,38 0,58 C-24,38 -22,-42 0,-58 Z" />
+          <path d="M0,-50 L0,52" stroke-width="1.4" fill="none" opacity=".5" />
+        </symbol>
+        <symbol id="fan" viewBox="-60 -8 120 82">
+          <g>
+            <path d="M0,72 L-52,6" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L-34,-2" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L-14,-6" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L6,-6" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L26,-2" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L46,8" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L56,26" stroke-width="6" stroke-linecap="round" />
+          </g>
+        </symbol>
+        <symbol id="spk" viewBox="-8 -8 16 16">
+          <path d="M0,-7 C.6,-1.8 1.8,-.6 7,0 C1.8,.6 .6,1.8 0,7 C-.6,1.8 -1.8,.6 -7,0 C-1.8,-.6 -.6,-1.8 0,-7 Z" />
+        </symbol>
+        <radialGradient id="vg" cx="50%" cy="45%" r="55%">
+          <stop offset="0%" stop-color="#F1BC55" stop-opacity=".95" />
+          <stop offset="45%" stop-color="#E8913C" stop-opacity=".5" />
+          <stop offset="100%" stop-color="#E8913C" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+
+      <!-- far foliage -->
+      <g class="foliage-far">
+        <use href="#fan" x="70" y="60" width="360" height="246" opacity=".55" transform="rotate(-8 250 180)" />
+        <use href="#fan" x="1050" y="520" width="420" height="287" opacity=".5" transform="rotate(6 1260 660)" />
+        <use href="#leaf" x="1180" y="80" width="150" height="232" opacity=".5" transform="rotate(24 1255 196)" />
+        <use href="#leaf" x="120" y="560" width="150" height="232" opacity=".5" transform="rotate(-18 195 676)" />
+      </g>
+      <!-- mid foliage -->
+      <g class="foliage-mid">
+        <use href="#fan" x="-40" y="360" width="420" height="287" opacity=".7" transform="rotate(10 170 500)" />
+        <use href="#leaf" x="980" y="40" width="150" height="232" opacity=".6" transform="rotate(30 1055 156)" />
+        <use href="#leaf" x="300" y="30" width="130" height="201" opacity=".55" transform="rotate(-12 365 130)" />
+        <use href="#leaf" x="1300" y="600" width="150" height="232" opacity=".6" transform="rotate(-26 1375 716)" />
+      </g>
+      <!-- coral branches -->
+      <g class="branches" fill="none" stroke-linecap="round" opacity=".8">
+        <path d="M-20,250 C260,300 420,180 720,240" stroke-width="9" />
+        <path d="M300,235 C340,180 360,150 430,120" stroke-width="6" />
+        <path d="M1460,640 C1180,600 980,720 640,700" stroke-width="9" />
+        <path d="M980,712 C960,760 940,800 900,840" stroke-width="6" />
+      </g>
+      <g class="berries">
+        <circle cx="452" cy="120" r="12" />
+        <circle cx="905" cy="836" r="12" />
+        <path d="M452,108 q6,-10 -2,-14" stroke="#8FBE6C" stroke-width="4" fill="none" />
+      </g>
+      <!-- inconspicuous little creature resting on a branch -->
+      <g class="critter" transform="translate(392 176)" opacity=".55">
+        <g class="critter-in">
+          <path d="M0,-1 q-7,-5 -10,0 q7,3 10,0 Z" fill="rgb(var(--foliage-near))" opacity=".7" />
+          <path d="M0,-1 q7,-5 10,0 q-7,3 -10,0 Z" fill="rgb(var(--foliage-near))" opacity=".7" />
+          <ellipse cx="0" cy="0" rx="2.6" ry="1.4" fill="rgb(var(--ink))" opacity=".55" />
+        </g>
+      </g>
+      <!-- near foliage -->
+      <g class="foliage-near">
+        <use href="#fan" x="1120" y="-30" width="480" height="328" opacity=".8" transform="rotate(-6 1360 130)" />
+        <use href="#leaf" x="40" y="10" width="180" height="279" opacity=".7" transform="rotate(-8 130 150)" />
+        <use href="#leaf" x="1240" y="360" width="170" height="263" opacity=".7" transform="rotate(18 1325 490)" />
+      </g>
+      <!-- vessels (firefly bottle / bubble / crystal glow) -->
+      <g class="vessels">
+        <circle class="vessel" cx="360" cy="640" r="34" fill="url(#vg)" />
+        <circle class="vessel" cx="1080" cy="470" r="26" fill="url(#vg)" />
+        <circle class="vessel" cx="720" cy="720" r="20" fill="url(#vg)" />
+      </g>
+      <!-- sparkles -->
+      <g class="sparkles" fill="#FFFFFF">
+        <use class="spark" href="#spk" x="290" y="470" width="18" height="18" />
+        <use class="spark" href="#spk" x="640" y="250" width="14" height="14" />
+        <use class="spark" href="#spk" x="980" y="560" width="20" height="20" />
+        <use class="spark" href="#spk" x="1180" y="300" width="12" height="12" />
+        <use class="spark" href="#spk" x="520" y="640" width="16" height="16" />
+        <use class="spark" href="#spk" x="1280" y="720" width="14" height="14" />
+        <use class="spark" href="#spk" x="160" y="330" width="12" height="12" />
+        <use class="spark" href="#spk" x="820" y="430" width="10" height="10" />
+        <use class="spark" href="#spk" x="440" y="200" width="12" height="12" />
+      </g>
+    </svg>
+
+    <div class="mist-layer"></div>
+    <div class="fireflies" id="fireflies"></div>
+  </div>
+
+  <main class="deck" id="deck">
+
+    <!-- 1 · Title -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">Hackathon · 梦境探索</p>
+        <h1 class="display">晨雾未醒<span class="en-sub">Verdant Mirage — walk into your dream</span></h1>
+        <p class="tagline">森林的雾还未散，都还来得及。</p>
+        <p class="lead" style="margin-top:1.6em;">带着说不出口的梦，<strong>走进去</strong>。</p>
+      </div>
+      <div class="foot"><span>晨雾未醒 · Verdant Mirage</span><span>01</span></div>
+    </section>
+
+    <!-- 2 · Tension -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">我们看见的</p>
+        <h2 class="big">有些话，<br>无法对任何人说。</h2>
+        <p class="lead wide">树洞会被发现，日记会被翻开，深夜的念头怕留下痕迹。<br>我们渴望<strong>被听见</strong>，又害怕<strong>被记住</strong>。</p>
+      </div>
+      <div class="foot"><span>The tension</span><span>02</span></div>
+    </section>
+
+    <!-- 3 · What it is -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">我们在做什么</p>
+        <h2 class="big">一个把你的梦，<br>变成可以走进去的<span class="accent">秘密世界</span>。</h2>
+        <div class="pills">
+          <span class="pill">梦境探索</span>
+          <span class="pill">非人倾听者</span>
+          <span class="pill">去留自选</span>
+        </div>
+      </div>
+      <div class="foot"><span>What it is</span><span>03</span></div>
+    </section>
+
+    <!-- 4 · Soul -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">设定</p>
+        <h2 class="big">树林深处，<br>有某种存在，<span class="accent">一直在倾听</span>。</h2>
+        <p class="lead wide">向自然，诉说无法对人说的东西。<br>它不是人——<strong>不评判、不劝导</strong>，也不会来到你的现实。</p>
+        <p class="footnote">「感受到某种存在」（felt presence）是被跨文化反复报告的真实主观体验，睡眠科学中约 80% 的相关经历都指向它。<br>不是凭空的幻想，而是有现象学依据的设定。</p>
+      </div>
+      <div class="foot"><span>The soul</span><span>04</span></div>
+    </section>
+
+    <!-- 5 · Core loop -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">核心体验</p>
+        <h2 class="big">一段梦，从碎片到安放。</h2>
+        <div class="loop">
+          <span class="node">记梦</span><span class="arr">→</span>
+          <span class="node">补全</span><span class="arr">→</span>
+          <span class="node">映照</span><span class="arr">→</span>
+          <span class="node">共创画面</span><span class="arr">→</span>
+          <span class="node">延伸探索</span><span class="arr">→</span>
+          <span class="node hot">安放</span><span class="arr">→</span>
+          <span class="node">助眠</span>
+        </div>
+        <p class="footnote">不解梦、不诊断——只<strong>映照、联想、共鸣</strong>。解读的主导权，始终在你手里。</p>
+      </div>
+      <div class="foot"><span>Core loop</span><span>05</span></div>
+    </section>
+
+    <!-- 6 · Entry -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">入口</p>
+        <h2 class="big">穿过一片树叶林，<br>尽头一道白光。</h2>
+        <p class="lead wide">
+          睁眼时，你在<strong>森林</strong>、<strong>海边</strong>，或<strong>岩洞深处</strong>。<br>一个未知的生物，轻声问你——<br><span
+            class="accent" style="font-family:var(--serif); font-style:italic; font-size:1.15em;">昨夜，你梦见了什么？</span></p>
+      </div>
+      <div class="foot"><span>The entry</span><span>06</span></div>
+    </section>
+
+    <!-- 7 · Three pillars -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">不是又一个 AI 陪伴</p>
+        <h2 class="big">三根支柱，<br>撑起「安全的倾诉」。</h2>
+        <div class="cards">
+          <div class="card"><span class="vk">🔒</span>
+            <div class="kv">Privacy</div>
+            <h3>隐私即设计</h3>
+            <p>阅后即焚，或本地加密。你的梦从不离开你的设备。</p>
+          </div>
+          <div class="card"><span class="vk">📖</span>
+            <div class="kv">Evidence</div>
+            <h3>循证即底线</h3>
+            <p>读的是原文，不是网络摘要。每条设计都能溯源到文献。</p>
+          </div>
+          <div class="card"><span class="vk">🌫️</span>
+            <div class="kv">Aesthetic</div>
+            <h3>美学即疗愈</h3>
+            <p>无字探索，少说多感。</p>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><span>Why us</span><span>07</span></div>
+    </section>
+
+    <!-- 8 · Privacy (refinement 1) -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow tag-new">隐私</p>
+        <h2 class="big">你的梦，<br><span class="accent">从不离开你的设备</span>。</h2>
+        <ul class="points">
+          <li><b>加密存储于本地设备</b>——不上云，不联网留痕。</li>
+          <li><b>一键清除</b>——随时抹去，不留任何后台记录。</li>
+          <li><b>默认无痕</b>——是否留存、以何种形式留存，一切由你掌控。</li>
+        </ul>
+      </div>
+      <div class="foot"><span>Privacy by design</span><span>08</span></div>
+    </section>
+
+    <!-- 9 · Ending ritual (refinements 3 & 4) — CENTERPIECE -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow tag-new">告别的仪式</p>
+        <h2 class="big">梦讲完了，<br>如何与它<span class="accent">告别</span>？</h2>
+        <div class="cards">
+          <div class="card leave"><span class="vk">✦</span>
+            <div class="kv">留下</div>
+            <h3>交给这片天地</h3>
+            <p>萤火瓶 / 气泡 / 水晶，被森林、海洋或地下的生物<strong>带走保管</strong>。</p>
+          </div>
+          <div class="card mist"><span class="vk">◌</span>
+            <div class="kv">化作雾光</div>
+            <h3>确认后散去</h3>
+            <p>容器化作雾，散开。<strong>这是删除</strong>——温柔地，不留痕。</p>
+          </div>
+          <div class="card take"><span class="vk">◇</span>
+            <div class="kv">带走</div>
+            <h3>还给你自己</h3>
+            <p>把容器交还，你带它离开。同样<strong>不留记录</strong>，只是换一种形式。</p>
+          </div>
+        </div>
+        <p class="footnote">默认为你留存；若中途离开，它成为一枚<strong>「未完成的梦」</strong>，静静等你回来。<br><span style="color:rgb(var(--ink-dim))">——
+            把隐私选择，变成场景里的一场仪式。</span></p>
+      </div>
+      <div class="foot"><span>The ending ritual</span><span>09</span></div>
+    </section>
+
+    <!-- 10 · Safety (refinement 2) -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow tag-new">安全</p>
+        <h2 class="big">当探索靠近危险，<br><span class="accent">我们停下。</span></h2>
+        <p class="lead wide">
+          检测到<strong>自伤、自杀等高危信号</strong>时，立即停止向深处探索，温柔地切入「安抚与安定」，并浮出专业求助资源——<br><strong>不假装成咨询师，只确保你安全落地。</strong></p>
+        <p class="footnote">依据：噩梦临床干预（IRT，35 项 RCT）、心理急救官方规范（NCTSN）、AI 心理风险实证研究（MIT Media Lab，15.7 万轮对话模拟）。</p>
+      </div>
+      <div class="foot"><span>Safety by design</span><span>10</span></div>
+    </section>
+
+    <!-- 11 · Grounded in research -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">我们的底气</p>
+        <h2 class="big">我们读了原文，<br>不是网络摘要。</h2>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="n">8</div>
+            <div class="l">个学术流派<br>分类归档</div>
+          </div>
+          <div class="stat">
+            <div class="n">A–D</div>
+            <div class="l">证据分级<br>标注可信度</div>
+          </div>
+          <div class="stat">
+            <div class="n">⚠</div>
+            <div class="l">明确标出<br>「缺乏科学支撑的通俗延伸」</div>
+          </div>
+        </div>
+        <p class="footnote">从弗洛伊德到睡眠神经科学，到人机依恋研究——每条设计都能溯源到具体文献，也诚实标注哪些是「不能说的话」。</p>
+      </div>
+      <div class="foot"><span>Grounded in research</span><span>11</span></div>
+    </section>
+
+    <!-- 12 · Close -->
+    <section class="slide">
+      <div class="inner" style="text-align:center;">
+        <h1 class="display">晨雾未醒<span class="en-sub">Verdant Mirage</span></h1>
+        <p class="tagline" style="margin-left:auto;margin-right:auto;">森林的雾还未散，都还来得及。</p>
+        <p class="close-line">记录梦　·　探索潜意识　·　安全落地　·　去留自选</p>
+      </div>
+      <div class="foot"><span>Thank you</span><span>12</span></div>
+    </section>
+
+  </main>
+
+  <div class="arrows" aria-hidden="true">
+    <button class="prev" id="prev" title="上一页">‹</button>
+    <button class="next" id="next" title="下一页">›</button>
+  </div>
+  <nav class="dots" id="dots" aria-label="幻灯片导航"></nav>
+  <div class="hint">← → 或空格翻页　·　F11 全屏</div>
+
+  <script>
+    (function () {
+      var deck = document.getElementById('deck');
+      var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+      var dotsWrap = document.getElementById('dots');
+      var n = slides.length, cur = 0;
+
+      slides.forEach(function (_, i) {
+        var b = document.createElement('button');
+        b.setAttribute('aria-label', '第 ' + (i + 1) + ' 页');
+        b.addEventListener('click', function () { go(i); });
+        dotsWrap.appendChild(b);
+      });
+      var dots = Array.prototype.slice.call(dotsWrap.children);
+
+      function paint() { dots.forEach(function (d, i) { d.setAttribute('aria-current', i === cur ? 'true' : 'false'); }); }
+      function go(i) {
+        cur = Math.max(0, Math.min(n - 1, i));
+        deck.scrollTo({ left: cur * deck.clientWidth, behavior: 'smooth' });
+        paint();
+      }
+
+      /* ---------------- Day → Night arc (scroll-driven theme) ----------------
+         Four stops. The dark/light flip is parked in the gap between slide 6
+         (t≈0.45) and slide 7 (t≈0.55) so every rest slide keeps strong text
+         contrast — dark ink on light bg through the day half, light ink on
+         dark bg through the night half. */
+      var STOPS = [
+        {
+          at: 0.00, /* DAWN — warm & bright */
+          p: {
+            '--bg-a': [250, 236, 212], '--bg-b': [240, 230, 216], '--bg-c': [224, 224, 210],
+            '--ink': [43, 54, 66], '--ink-soft': [86, 96, 104], '--ink-dim': [130, 138, 144],
+            '--accent': [176, 88, 50],
+            '--line': [92, 80, 68], '--panel': [120, 110, 96],
+            '--foliage-far': [158, 176, 146], '--foliage-mid': [128, 156, 114], '--foliage-near': [104, 138, 92],
+            '--branch': [176, 96, 68], '--berry': [178, 80, 96],
+            '--glow-warm': [248, 210, 150], '--glow-cool': [214, 204, 222],
+            '--glow': 0.05, '--mist': 1
+          }
+        },
+        {
+          at: 0.47, /* GOLDEN DUSK — still light enough for dark text */
+          p: {
+            '--bg-a': [244, 214, 176], '--bg-b': [236, 206, 170], '--bg-c': [208, 178, 150],
+            '--ink': [54, 46, 42], '--ink-soft': [92, 80, 72], '--ink-dim': [132, 116, 104],
+            '--accent': [168, 80, 44],
+            '--line': [96, 78, 62], '--panel': [128, 108, 88],
+            '--foliage-far': [150, 158, 120], '--foliage-mid': [126, 140, 96], '--foliage-near': [104, 124, 80],
+            '--branch': [176, 86, 58], '--berry': [176, 72, 84],
+            '--glow-warm': [246, 196, 120], '--glow-cool': [210, 190, 180],
+            '--glow': 0.35, '--mist': 0.5
+          }
+        },
+        {
+          at: 0.53, /* DEEP DUSK — flipped to light text on dark bg */
+          p: {
+            '--bg-a': [46, 52, 84], '--bg-b': [34, 42, 68], '--bg-c': [22, 30, 52],
+            '--ink': [224, 228, 236], '--ink-soft': [176, 190, 204], '--ink-dim': [128, 146, 162],
+            '--accent': [236, 176, 96],
+            '--line': [190, 204, 216], '--panel': [120, 146, 162],
+            '--foliage-far': [58, 74, 98], '--foliage-mid': [66, 88, 110], '--foliage-near': [78, 100, 120],
+            '--branch': [182, 86, 68], '--berry': [168, 68, 90],
+            '--glow-warm': [236, 158, 78], '--glow-cool': [130, 110, 150],
+            '--glow': 0.6, '--mist': 0.2
+          }
+        },
+        {
+          at: 1.00, /* DEEP NIGHT */
+          p: {
+            '--bg-a': [30, 43, 70], '--bg-b': [22, 34, 58], '--bg-c': [15, 23, 40],
+            '--ink': [234, 240, 244], '--ink-soft': [183, 196, 207], '--ink-dim': [132, 150, 164],
+            '--accent': [241, 188, 85],
+            '--line': [203, 215, 224], '--panel': [124, 151, 166],
+            '--foliage-far': [51, 70, 92], '--foliage-mid': [62, 84, 104], '--foliage-near': [74, 96, 116],
+            '--branch': [178, 74, 60], '--berry': [158, 59, 82],
+            '--glow-warm': [232, 145, 60], '--glow-cool': [110, 90, 130],
+            '--glow': 1, '--mist': 0
+          }
+        }
+      ];
+      var rootStyle = document.documentElement.style;
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function smoothstep(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+
+      function paintTheme(t) {
+        t = Math.max(0, Math.min(1, t));
+        var i = 0;
+        while (i < STOPS.length - 2 && t > STOPS[i + 1].at) i++;
+        var a = STOPS[i], b = STOPS[i + 1];
+        var u = smoothstep((t - a.at) / (b.at - a.at));
+        for (var k in b.p) {
+          var pa = a.p[k], pb = b.p[k];
+          if (Array.isArray(pa)) {
+            rootStyle.setProperty(k,
+              Math.round(lerp(pa[0], pb[0], u)) + ' ' +
+              Math.round(lerp(pa[1], pb[1], u)) + ' ' +
+              Math.round(lerp(pa[2], pb[2], u)));
+          } else {
+            rootStyle.setProperty(k, lerp(pa, pb, u).toFixed(3));
+          }
+        }
+      }
+
+      function progress() {
+        var max = deck.scrollWidth - deck.clientWidth;
+        if (max <= 0) return 0;
+        return deck.scrollLeft / max;
+      }
+
+      var dirty = false;
+      function updateTheme() { dirty = false; paintTheme(smoothstep(progress())); }
+      function requestTheme() { if (!dirty) { dirty = true; requestAnimationFrame(updateTheme); } }
+
+      var t;
+      deck.addEventListener('scroll', function () {
+        requestTheme();
+        clearTimeout(t);
+        t = setTimeout(function () { cur = Math.round(deck.scrollLeft / deck.clientWidth); paint(); }, 80);
+      }, { passive: true });
+
+      document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+      document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); go(cur + 1); }
+        else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+        else if (e.key === 'Home') { e.preventDefault(); go(0); }
+        else if (e.key === 'End') { e.preventDefault(); go(n - 1); }
+      });
+
+      window.addEventListener('resize', function () { deck.scrollTo({ left: cur * deck.clientWidth }); requestTheme(); });
+
+      /* ---------------- Fireflies (skip when reduced motion) ---------------- */
+      (function seedFireflies() {
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce) return;
+        var box = document.getElementById('fireflies');
+        if (!box) return;
+        var small = window.matchMedia('(max-width:760px)').matches;
+        var N = small ? 8 : 14;
+        for (var i = 0; i < N; i++) {
+          var e = document.createElement('span');
+          e.className = 'firefly';
+          var size = (2 + Math.random() * 4).toFixed(1);
+          e.style.left = (Math.random() * 100).toFixed(1) + '%';
+          e.style.top = (38 + Math.random() * 56).toFixed(1) + '%';
+          e.style.width = size + 'px';
+          e.style.height = size + 'px';
+          e.style.setProperty('--dx', ((Math.random() * 2 - 1) * 80).toFixed(0) + 'px');
+          e.style.setProperty('--dy', (-(30 + Math.random() * 90)).toFixed(0) + 'px');
+          e.style.setProperty('--dur', (12 + Math.random() * 10).toFixed(1) + 's');
+          e.style.setProperty('--delay', (-Math.random() * 22).toFixed(1) + 's');
+          e.style.setProperty('--peak', (0.5 + Math.random() * 0.5).toFixed(2));
+          box.appendChild(e);
+        }
+      })();
+
+      paint();
+      updateTheme();
+    })();
+  </script>
+</body>
+
+</html>
