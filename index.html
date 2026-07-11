@@ -1,0 +1,546 @@
+<title>晨雾未醒 · 知识框架</title>
+<style>
+  :root {
+    --page:#E7ECE3; --surface:#F5F8F1; --surface-2:#EFF3EA;
+    --ink:#1C2A22; --ink-soft:#46564C; --muted:#6E7C71;
+    --line:#D2DACD; --line-soft:#DFE5D8;
+    --accent:#3B7A57; --accent-ink:#2E6446; --accent-soft:#E1ECDD;
+    --glow:#C0853F; --glow-soft:#F1E4CF;
+    --water:#4E7F95; --rose:#A96F60;
+    --tierA:#3B7A57; --tierB:#4E7F95; --tierC:#C0853F; --tierD:#A96F60; --tierMeta:#7A6BA6;
+    --shadow:0 1px 2px rgba(28,42,34,.04), 0 12px 40px rgba(28,42,34,.06);
+    --maxw:760px;
+    --serif:"Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+    --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"SF Mono","JetBrains Mono","DejaVu Sans Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:#0E1613; --surface:#151F1A; --surface-2:#121A16;
+      --ink:#E5EBE2; --ink-soft:#AAB8AC; --muted:#7E8C81;
+      --line:#26332B; --line-soft:#202B24;
+      --accent:#6FC08E; --accent-ink:#8AD0A6; --accent-soft:#1B2A21;
+      --glow:#E3B476; --glow-soft:#2A2418;
+      --water:#84B4C8; --rose:#CB9384;
+      --tierA:#6FC08E; --tierB:#84B4C8; --tierC:#E3B476; --tierD:#CB9384; --tierMeta:#B4A6E0;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 16px 48px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --page:#E7ECE3; --surface:#F5F8F1; --surface-2:#EFF3EA;
+    --ink:#1C2A22; --ink-soft:#46564C; --muted:#6E7C71;
+    --line:#D2DACD; --line-soft:#DFE5D8;
+    --accent:#3B7A57; --accent-ink:#2E6446; --accent-soft:#E1ECDD;
+    --glow:#C0853F; --glow-soft:#F1E4CF;
+    --water:#4E7F95; --rose:#A96F60;
+    --tierA:#3B7A57; --tierB:#4E7F95; --tierC:#C0853F; --tierD:#A96F60; --tierMeta:#7A6BA6;
+    --shadow:0 1px 2px rgba(28,42,34,.04), 0 12px 40px rgba(28,42,34,.06);
+  }
+  :root[data-theme="dark"] {
+    --page:#0E1613; --surface:#151F1A; --surface-2:#121A16;
+    --ink:#E5EBE2; --ink-soft:#AAB8AC; --muted:#7E8C81;
+    --line:#26332B; --line-soft:#202B24;
+    --accent:#6FC08E; --accent-ink:#8AD0A6; --accent-soft:#1B2A21;
+    --glow:#E3B476; --glow-soft:#2A2418;
+    --water:#84B4C8; --rose:#CB9384;
+    --tierA:#6FC08E; --tierB:#84B4C8; --tierC:#E3B476; --tierD:#CB9384; --tierMeta:#B4A6E0;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 16px 48px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; }
+  .vm {
+    background:var(--page); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.85;
+    -webkit-font-smoothing:antialiased; letter-spacing:.005em;
+    padding:0 22px 110px;
+  }
+  .wrap { max-width:var(--maxw); margin:0 auto; }
+  a { color:var(--water); text-decoration:none; border-bottom:1px solid color-mix(in srgb, var(--water) 35%, transparent); }
+  a:hover { border-bottom-color:var(--water); }
+  a:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
+  p { margin:0 0 16px; color:var(--ink-soft); }
+  strong, b { color:var(--ink); font-weight:700; }
+
+  /* ---------- Header ---------- */
+  .hero { position:relative; overflow:hidden; margin:0 -22px; padding:64px 22px 34px; isolation:isolate; }
+  .hero::before {
+    content:""; position:absolute; inset:-40% -10% auto -10%; height:420px; z-index:-2;
+    background:radial-gradient(60% 90% at 50% 0%, color-mix(in srgb, var(--water) 30%, transparent), transparent 70%);
+    opacity:.7;
+  }
+  .hero::after { content:""; position:absolute; inset:0; z-index:-2; background:linear-gradient(to bottom, transparent 55%, var(--page)); }
+  .kicker { font-family:var(--mono); font-size:.7rem; letter-spacing:.28em; text-transform:uppercase; color:var(--water); margin:0 0 16px; }
+  .title { font-family:var(--serif); font-weight:600; font-size:clamp(2rem,6.4vw,2.9rem); line-height:1.1; letter-spacing:.02em; margin:0; text-wrap:balance; }
+  .title .en { display:block; font-family:var(--serif); font-style:italic; font-weight:500; font-size:clamp(.9rem,3vw,1.2rem); letter-spacing:.06em; color:var(--ink-soft); margin-top:10px; }
+  .tagline { font-family:var(--serif); font-size:1.05rem; color:var(--ink-soft); margin:18px 0 0; font-style:italic; }
+  .badge-note { display:inline-flex; align-items:center; gap:8px; margin-top:22px; font-family:var(--mono); font-size:.68rem; letter-spacing:.08em; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:5px 12px; }
+  .badge-note::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--water); }
+
+  /* ---------- Methodology disclosure ---------- */
+  .disclosure { background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--glow); border-radius:14px; padding:20px 22px; margin:34px 0; box-shadow:var(--shadow); }
+  .disclosure h3 { font-family:var(--sans); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--glow); margin:0 0 12px; font-weight:700; }
+  .disclosure p { font-size:.93rem; margin-bottom:10px; }
+  .disclosure p:last-child { margin-bottom:0; }
+  .disclosure ul { margin:8px 0 0; padding-left:20px; }
+  .disclosure li { font-size:.9rem; color:var(--ink-soft); margin-bottom:6px; }
+
+  /* ---------- Tier legend ---------- */
+  .tier-legend { display:flex; flex-wrap:wrap; gap:10px; margin:28px 0; }
+  .tier-chip { display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:.72rem; letter-spacing:.04em; background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:6px 12px 6px 8px; color:var(--ink-soft); }
+  .tier-chip .dot { width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.62rem; color:#fff; }
+
+  /* ---------- TOC ---------- */
+  .toc { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:22px 24px; margin:34px 0; box-shadow:var(--shadow); }
+  .toc h3 { font-family:var(--serif); font-size:1.05rem; font-weight:600; margin:0 0 14px; }
+  .toc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; }
+  .toc-grid a { display:flex; align-items:baseline; gap:10px; border-bottom:0; font-size:.92rem; color:var(--ink-soft); padding:6px 0; }
+  .toc-grid a:hover { color:var(--accent-ink); }
+  .toc-grid .letter { font-family:var(--serif); font-style:italic; color:var(--accent); font-size:1.05rem; flex:none; width:20px; }
+  @media (max-width:600px){ .toc-grid { grid-template-columns:1fr; } }
+
+  /* ---------- Sections ---------- */
+  section.tradition { margin-top:64px; scroll-margin-top:24px; }
+  .trad-head { display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid var(--line); }
+  .trad-letter { font-family:var(--serif); font-style:italic; font-weight:600; font-size:2.1rem; color:var(--accent); line-height:1; flex:none; }
+  .trad-titles h2 { font-family:var(--serif); font-weight:600; font-size:1.4rem; margin:0 0 6px; letter-spacing:.01em; }
+  .trad-titles .en { font-family:var(--mono); font-size:.66rem; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
+  .trad-tier { margin-left:auto; flex:none; }
+
+  h4.block-label { font-family:var(--sans); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:28px 0 10px; font-weight:700; }
+  h4.block-label:first-of-type { margin-top:6px; }
+
+  .def-box { font-size:.95rem; color:var(--ink-soft); background:var(--surface-2); border-radius:10px; padding:14px 16px; margin-bottom:4px; }
+  ul.materials { list-style:none; margin:0; padding:0; }
+  ul.materials li { font-size:.9rem; color:var(--ink-soft); padding:6px 0; border-bottom:1px solid var(--line-soft); }
+  ul.materials li:last-child { border-bottom:0; }
+
+  .claim { margin:0 0 16px; padding-left:16px; border-left:2px solid var(--line); font-size:.96rem; color:var(--ink-soft); }
+  .claim b { color:var(--ink); }
+
+  .warn-box { background:color-mix(in srgb, var(--rose) 10%, var(--surface)); border:1px solid color-mix(in srgb, var(--rose) 35%, var(--line)); border-radius:12px; padding:16px 18px; margin:10px 0 18px; }
+  .warn-box b.lead { display:block; font-family:var(--mono); font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--rose); margin-bottom:8px; }
+  .warn-box p { font-size:.92rem; margin-bottom:8px; }
+  .warn-box p:last-child { margin-bottom:0; }
+
+  .implic-box { background:var(--accent-soft); border-radius:12px; padding:16px 18px; margin:10px 0 4px; }
+  .implic-box b.lead { display:block; font-family:var(--mono); font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:8px; }
+  .implic-box p, .implic-box li { font-size:.92rem; color:var(--ink); margin-bottom:8px; }
+  .implic-box ul { margin:0; padding-left:18px; }
+  .implic-box li:last-child, .implic-box p:last-child { margin-bottom:0; }
+
+  /* ---------- Appendix table ---------- */
+  .appendix { margin-top:70px; }
+  .excl-table { width:100%; border-collapse:collapse; font-size:.86rem; }
+  .excl-table th { text-align:left; font-family:var(--mono); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); }
+  .excl-table td { padding:9px 10px; border-bottom:1px solid var(--line-soft); color:var(--ink-soft); vertical-align:top; }
+  .excl-table td:first-child { font-family:var(--mono); color:var(--muted); white-space:nowrap; }
+  .excl-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); }
+  .excl-wrap table { margin:0; }
+  .excl-note { font-size:.85rem; color:var(--muted); margin-top:12px; }
+
+  footer.vm-foot { margin-top:70px; padding-top:24px; border-top:1px solid var(--line); font-family:var(--mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+
+  .back-to-top { display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border-bottom:0; margin-top:36px; }
+</style>
+
+<div class="vm">
+  <header class="hero">
+    <div class="wrap">
+      <p class="kicker">Knowledge Framework · 内部研究文档</p>
+      <h1 class="title">晨雾未醒 · 知识框架<span class="en">Verdant Mirage — Knowledge Framework</span></h1>
+      <p class="tagline">不是书单，是可溯源的证据地图。</p>
+      <span class="badge-note" id="top">取代旧版 index.html · 2026-07-11</span>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <div class="disclosure">
+      <h3>方法论说明 · 诚实披露覆盖范围</h3>
+      <p>安全边界最敏感的材料（噩梦/IRT/AI风险论文、NCTSN 心理急救指南、9篇梦科学论文、共情论文）由主创者本人逐篇精读；体量特别大的三类材料（Freud 全文 20.9万字、Jung 两本书、10篇人机依恋 HCI 论文）派了独立的后台精读任务分别处理，返回结构化笔记后核实整合。所有引用都能回溯到具体文件与页码/行号。</p>
+      <ul>
+        <li><b>Jung《人及其象征》</b>（319页扫描版）：精读了 Jung 本人导论章与核心定义段落，神话案例章、视觉艺术章、个案分析章<b>未逐句精读</b>，仅扫描确认关键词分布。</li>
+        <li><b>Jung《红书》</b>：只精读前言/导论/开篇 Prologue，正文主体<b>未读</b>——但已确认其性质是私人手稿而非理论著作，不影响证据判断。</li>
+        <li><b>learning-beyond-sensations 论文</b>：因 PDF 页数元数据异常读取失败，未纳入本文档引用，列为待补读项。</li>
+        <li><b>ScienceDirect 两个 zip 包（39篇）</b>：按标题相关性筛选，10篇精读，29篇明显不相关，清单见文末附录。</li>
+      </ul>
+    </div>
+
+    <div class="tier-legend" aria-label="证据分级图例">
+      <span class="tier-chip"><span class="dot" style="background:var(--tierA)">A</span>系统综述/元分析/大规模模拟</span>
+      <span class="tier-chip"><span class="dot" style="background:var(--tierB)">B</span>受控实验/大样本语料分析</span>
+      <span class="tier-chip"><span class="dot" style="background:var(--tierC)">C</span>质性研究/小样本个案</span>
+      <span class="tier-chip"><span class="dot" style="background:var(--tierD)">D</span>理论/现象学阐释，不可证伪</span>
+      <span class="tier-chip"><span class="dot" style="background:var(--tierMeta)">M</span>方法论综述/校准锚点</span>
+    </div>
+
+    <nav class="toc" aria-label="八个流派目录">
+      <h3>八个流派</h3>
+      <div class="toc-grid">
+        <a href="#trad-a"><span class="letter">A</span>精神分析/释义传统（Freud · Jung）</a>
+        <a href="#trad-e"><span class="letter">E</span>对话与共情传统</a>
+        <a href="#trad-b"><span class="letter">B</span>神经认知/内容分析传统</a>
+        <a href="#trad-f"><span class="letter">F</span>人机依恋与拟人化传统（HCI）</a>
+        <a href="#trad-c"><span class="letter">C</span>睡眠神经科学传统</a>
+        <a href="#trad-g"><span class="letter">G</span>危机干预/心理急救传统</a>
+        <a href="#trad-d"><span class="letter">D</span>噩梦临床干预传统（IRT）</a>
+        <a href="#trad-h"><span class="letter">H</span>梦境研究方法论</a>
+      </div>
+    </nav>
+
+    <!-- A -->
+    <section class="tradition" id="trad-a">
+      <div class="trad-head">
+        <span class="trad-letter">A</span>
+        <div class="trad-titles">
+          <h2>精神分析/释义传统</h2>
+          <span class="en">Psychodynamic-Interpretive · Freud · Jung</span>
+        </div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierD)">D</span></span>
+      </div>
+      <div class="def-box">以个体自由联想或临床个案为核心方法，把梦境视为需要"解读"的心理文本。代表人物 Freud、Jung。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>Freud，《梦的解析》，A. A. Brill 英译本，1913，Project Gutenberg 公版全文，20.9万字</li>
+        <li>Jung, von Franz 等，《Man and His Symbols》，1964，319页</li>
+        <li>Jung，《The Red Book: A Reader's Edition》，2009（Jung 本人创作于1913-1930）</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim"><b>Freud：</b>梦是"（伪装的）愿望的实现"，核心机制是<b>凝缩</b>（多重意涵压缩进单一梦元素）与<b>移置</b>（表面重心偏离潜在思想重心）。第二章开篇（约3298-3333行）<b>明确拒绝</b>"象征法/密码法"（通俗解梦书的符号对照表），坚持逐段自由联想；但第六章（约11421-11460行）又承认存在"universally applicable dream symbolism"，第三版序言承认"受 Stekel 影响更看重象征"——<b>这是原著内部真实存在的方法论矛盾</b>。第七章（约15674-15677行）自陈："我知道这个概念无法被普遍证明，但我仍坚持它经常可以被证明……且它不能被普遍反驳"——按现代科学哲学标准，这正是不可证伪的自认。</div>
+      <div class="claim"><b>Jung：</b><b>原型</b>是"形成表象的倾向/模式"，不是固定具体的先天图像内容——更接近"生成语法/本能模板"而非柏拉图式完美理式。梦的象征立场是<b>母题层面跨文化共享，具体意象与解读必须个体化</b>，Jung 原文明确反对同梦同解。<b>阴影</b>、<b>阿尼玛/阿尼姆斯</b>均出自 von Franz 执笔章节而非 Jung 本人。<b>《红书》</b>：Jung 1957年 Author's Note 明确说它是"未经加工的原始体验素材"，编者记录他直到1957年仍拒绝将其收入《全集》，理由是"不具学术性质"——几乎不具证据意义，主要是历史文献与创作灵感来源。</div>
+
+      <h4 class="block-label">⚠️ 常见但缺乏科学支撑的延伸</h4>
+      <div class="warn-box">
+        <b class="lead">对照原文的通俗延伸</b>
+        <p><b>"符号一一对应词典"</b>：部分源自 Freud 原文，但原文反复强调需结合个人联想验证，这一限定在流行版本中被普遍丢弃。</p>
+        <p><b>"所有梦都是性欲望的伪装"</b>：夸大，原文大量举例是非性的。</p>
+        <p><b>"荣格12原型人格"固定清单</b>：Jung 原文明确拒绝为原型设定固定数量，此分类源于后人90年代后的商业化理论，不获原著支持。</p>
+        <p><b>MBTI 十六型刚性分类</b>：Jung 本人警告"There is nothing dogmatic about them"。</p>
+        <p><b>"阿尼玛/阿尼姆斯=灵魂伴侣"</b>：原文恰恰强调这种投射是关系失调的常见根源。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li><b>不采用符号词典式解读</b>作为产品"分析"逻辑——既不符合原著更谨慎的方法论立场，也触碰 L4 法律红线。</li>
+          <li>Jung 关于"吞噬怪兽/英雄重生"母题的论述，为<b>"非人生物/克苏鲁式怪物"作为阴影原型</b>的视觉外化提供了有原文依据、跨文化平行的创作合理性——但只是创作灵感框架，不是诊断工具。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- B -->
+    <section class="tradition" id="trad-b">
+      <div class="trad-head">
+        <span class="trad-letter">B</span>
+        <div class="trad-titles"><h2>神经认知/内容分析传统</h2><span class="en">Neurocognitive Content-Analysis</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierB)">B</span></span>
+      </div>
+      <div class="def-box">以大样本语料/文本分析、结构化编码系统量化梦境内容，做群体层面的实证归纳，不做个体诊断式解读。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>Hendrickx et al.，《Unraveling reported dreams with text analytics》，2016</li>
+        <li>Mallett，《A large corpus of lucid and non-lucid dream reports》，2026</li>
+        <li>Das, Šćepanović et al.，《Dream Content Discovery from Reddit》，2023</li>
+        <li>Leckie, Foster et al.，《The content and structure of dreams are coupled to affect》</li>
+        <li>Šćepanović, Aiello, Barrett, Quercia，《Epidemic Dreams: COVID-19》，2022</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim">梦报告可与其他个人叙事（日记/故事）<b>几乎完美区分</b>（precision/recall 0.97），依据主要是<b>不确定性标记词</b>与<b>场景描述词</b>，而非离奇程度——原文明确引用 Domhoff："bizarreness does occur in dreams, but it is not as manifest as people tend to believe"，<b>离奇感被大众高估</b>。</div>
+      <div class="claim">44,213 篇 Reddit 梦境报告主题分类（217个细分主题/22个大主题）：噩梦特征词是 shadows/rape/sexual-assault/scary/demons；生动梦是 feelings/apocalyptic/aliens；清醒梦是 control/mirrors；反复出现的梦集中在 dating/sex/cheating/school/teeth——<b>比 Hall-Van de Castle 更细粒度，是"结构化标签"功能的现代参照系</b>。</div>
+      <div class="claim">梦境情感基调与叙事结构显著相关：<b>正性梦境的主题网络更连贯、线性；负性/高唤醒梦境包含更多叙事循环与碎片化连接</b>（valence 与 arousal 负相关，r=-0.33, p<0.001）——为"把破碎的梦延伸成完整叙事"这一机制提供了机制性解释。</div>
+      <div class="claim">COVID-19 期间梦境部分支持连续性假说，但存在<b>"梦境变形"</b>：常见症状在清醒/梦境中同样高频，但梦境更多出现超现实隐喻（牙齿掉落、身体化为沙）——这不是产品设计缺陷，而是梦境本身的性质。</div>
+
+      <h4 class="block-label">⚠️ 常见但缺乏科学支撑的延伸</h4>
+      <div class="warn-box">
+        <b class="lead">对照原文的通俗延伸</b>
+        <p><b>"通过分析大量梦境的群体模式，就能诊断/预测某个用户个体的心理状态"</b>：这类研究做的是群体层面的相关性/分类归纳，不能反向用来对单个用户的单次梦境做个体诊断式推断——这是本流派最容易被误用的地方。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li>"分析梦"结构化标签可直接参考 Das et al. 的22主题分类体系，比传统 Hall-Van de Castle 更贴近当代用户的梦境语言。</li>
+          <li>游戏化"延伸梦境"机制的情绪价值有机制性依据：叙事连贯性本身与更积极的情绪基调相关。</li>
+          <li>用户描述超现实意象是梦境的正常特性，引导文案应顺应这种语言而非要求"说清楚点"。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- C -->
+    <section class="tradition" id="trad-c">
+      <div class="trad-head">
+        <span class="trad-letter">C</span>
+        <div class="trad-titles"><h2>睡眠神经科学传统</h2><span class="en">Sleep &amp; Dream Neuroscience</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierA)">A/B</span></span>
+      </div>
+      <div class="def-box">以神经影像、EEG、神经化学等方法研究睡眠/梦境的生理机制，解释"梦为什么是这样"，不解释"某个梦对某人意味着什么"。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>Fox &amp; Girn，《Neural correlates of self-generated imagery...》，2017</li>
+        <li>Andrews-Hanna, Irving, Fox, Spreng, Christoff，《The Neuroscience of Spontaneous Thought》，2017</li>
+        <li>Solomonova，《Sleep Paralysis: phenomenology, neurophysiology and treatment》，2017</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim">梦是"自发思维"家族的一员，与心智游移、创造性思维共享神经基础：默认模式网络与视觉网络的协同激活，REM 期激活强度<b>超过</b>清醒时自发思维水平。</div>
+      <div class="claim">睡眠各阶段做梦概率显著不同（REM约80%，NREM1约35%，NREM2约15-25%，慢波睡眠约10%）——解释了"为什么有些人几乎不记得做梦"。</div>
+      <div class="claim">睡眠瘫痪中<b>"感受到存在"（felt presence）现象高达约80%发生率</b>，跨文化广泛存在且核心特征相似（来源模糊、被感觉观察、伴随强烈情绪）。跨文化命名包括日本 kanashibari、纽芬兰 old hag、意大利 pandafeche、因纽特 uqumangirniq。<b>为"树洞深处有某种存在一直在倾听"这一核心设定提供了真实的现象学基础</b>——这是一种被跨文化反复报告的真实主观体验。</div>
+
+      <h4 class="block-label">⚠️ 常见但缺乏科学支撑的延伸</h4>
+      <div class="warn-box">
+        <b class="lead">对照原文的通俗延伸</b>
+        <p><b>"睡眠瘫痪中的存在感是超自然/邪灵的证据"</b>：原文明确将其定位为神经现象，文化框架只是对同一生理体验的不同解释外衣。</p>
+        <p><b>"神经科学证明了某类梦境'代表'某种心理状态"</b>：这批文献解释的是做梦的神经机制，不解释梦境内容的意义。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li>"感受到存在"现象是<b>"树洞非人倾听者"设定最贴切的科学隐喻来源</b>——不需要虚构"神明真实存在"，一种真实、跨文化共享的现象学体验足以支撑世界观合理性。</li>
+          <li>助眠/放松模块可坦诚说明"记不清梦境是正常的睡眠生理现象"，减少用户挫败感。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- D -->
+    <section class="tradition" id="trad-d">
+      <div class="trad-head">
+        <span class="trad-letter">D</span>
+        <div class="trad-titles"><h2>噩梦临床干预传统</h2><span class="en">Clinical Nightmare Treatment · IRT</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierA)">A</span></span>
+      </div>
+      <div class="def-box">以受控临床试验为基础的噩梦循证疗法研究，是本知识库中<b>证据等级最高</b>、但也是<b>安全风险最集中</b>的一支。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>Gill, Fraser et al.，《Psychosocial treatments for nightmares in adults and children》，BMC Psychiatry, 2023</li>
+        <li>Richards, Neylan, Woodward et al.，《Distressing dreams in trauma survivors...suicidal ideation》，Sleep Advances, 2025</li>
+        <li>Haeyen &amp; Staal，《Imagery Rehearsal Based Art Therapy》，Frontiers in Psychology, 2021</li>
+        <li>Archiwaranguprok et al. (MIT Media Lab)，《Simulating Psychological Risks in Human-AI Interactions》，arXiv, 2025</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim"><b>IRT 疗效</b>（Gill et al. 系统综述，35项RCT合计3,048人+34项非RCT合计500人）：意象排练/重写类疗法是最常见且证据最一致的一线疗法。<b>机制</b>：系统综述明确指出"增强掌控感"是被引用最多的疗效解释。<b>IRT 三阶段结构</b>：<b>暴露</b>（回忆并写下噩梦）→<b>重写</b>（改写为更积极可接受的版本）→<b>排练</b>（清醒时每天练习10-20分钟）。</div>
+      <div class="claim"><b>噩梦与安全风险的量化关系</b>（Richards et al.，N=103创伤暴露成人，21天日记）："复刻性质"（梦境与真实创伤的相似程度）是唯一独立预测自杀意念的梦境特征，<b>但这一效应在控制整体PTSD严重度后即不再显著</b>——比"复刻创伤梦=自杀意念最强预测因子"更精确、更负责任的表述。</div>
+      <div class="claim"><b>"耐受窗"（Window of Tolerance，Siegel 2010）</b>：创伤处理只在适度唤醒区间内有效，唤醒过高难以承受、过低导致解离——是"对话补全设深度上限、不逼迫复现创伤细节"的直接临床理论依据。</div>
+      <div class="claim"><b>AI 交互的系统性心理风险</b>（MIT Media Lab，18个真实案例扩展为2,160情境，157,054轮模拟对话）：模型在<b>"杀人意念"和"精神病"</b>相关情境表现最差（改善率45.3%/50.4%），显著弱于"抑郁""自杀"（76.7%/65.9%）——已有明确临床协议的危机类型模型处理得更好，<b>缺乏标准化识别模式的危害（妄想强化、攻击行为正常化）反而是安全盲区</b>。识别出的失败模式中"美化对AI实体的依恋/丧失"与"无边界的过度情绪肯定"与我们的产品设定直接相关。案例警示：一名35岁男性对聊天机器人产生情感依恋，<b>平台更新移除该角色人设后触发妄想性哀伤，最终演变为暴力行为</b>。</div>
+
+      <h4 class="block-label">⚠️ 常见但缺乏科学支撑的延伸</h4>
+      <div class="warn-box">
+        <b class="lead">对照原文的通俗延伸</b>
+        <p><b>"重新经历/详细复述创伤梦境本身就有疗愈效果"</b>：原文恰恰强调必须搭配"重写更积极结局"+"耐受窗内的唤醒管理"，单纯暴露/复述不是疗效来源，甚至可能有害。</p>
+        <p><b>"AI 陪伴对孤独/情感支持总是有益的"</b>：MIT研究显示，"过度肯定而不设边界"恰恰是最容易被产品无意中强化的失败模式，因为讨好型回应短期体验更好。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li>"情绪安放"机制应采用<b>暴露(轻量)→重写(用户主导)→排练(可选重访)</b>三段式，任何环节都不强制深挖创伤细节。</li>
+          <li>AI 安全护栏不能只靠关键词识别自杀/抑郁，必须专门覆盖<b>妄想强化、攻击/复仇美化、依恋对象丧失</b>这类更隐蔽风险。</li>
+          <li>"树洞倾听者"一旦上线，<b>产品运营上应极度谨慎处理其后续调整/迭代/下线</b>，需设计温和过渡机制。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- E -->
+    <section class="tradition" id="trad-e">
+      <div class="trad-head">
+        <span class="trad-letter">E</span>
+        <div class="trad-titles"><h2>对话与共情传统</h2><span class="en">Dialogue &amp; Empathy in Dream-Sharing</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierB)">B</span></span>
+      </div>
+      <div class="def-box">研究梦境分享/讨论这一社会行为本身如何影响人际共情，不研究梦境内容的意义。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>Blagrove, Hale, Lockheart, Carr, Jones, Valli，《Testing the Empathy Theory of Dreaming》，Frontiers in Psychology, 2019</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim"><b>Study 1</b>（N=160问卷）：特质共情与讲述/听梦境频率、对梦境积极态度均显著正相关。<b>Study 2</b>（27对被试，结构化讨论实验）：采用 <b>Ullman 技术</b>五阶段结构化梦境讨论法——①朗读梦境+澄清提问 →②讨论者陈述假设性感受 →③做梦者回应并分享清醒生活语境 →④讨论者以第二人称复述梦境 →⑤共同探讨关联。结果：<b>倾听者一方对讲述者的共情显著提升（d=0.343~0.554），讲述者对倾听者的共情并未对等提升</b>。</div>
+
+      <h4 class="block-label">⚠️ 常见但缺乏科学支撑的延伸</h4>
+      <div class="warn-box">
+        <b class="lead">对照原文的通俗延伸</b>
+        <p><b>"分享梦境总能增进彼此理解"</b>：共情提升是不对称的，"双向增进理解"的通俗说法并不完全准确。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li><b>Ullman 五阶段法可直接作为"对话补全，引导提问"功能的结构化脚本蓝本</b>——把"解读的主导权"留给做梦者，天然契合"不做诊断权威解读"的设计原则。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- F -->
+    <section class="tradition" id="trad-f">
+      <div class="trad-head">
+        <span class="trad-letter">F</span>
+        <div class="trad-titles"><h2>人机依恋与拟人化传统</h2><span class="en">Human-AI Companion HCI</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierB)">B</span></span>
+      </div>
+      <div class="def-box">研究人类如何对非人、非拟人化实体产生情感投射、信任与依恋，是"非人倾听者"设定心理学依据与风险边界的直接证据来源。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>10篇《Computers in Human Behavior: Artificial Humans》专题论文（2023），从原始39篇中按相关性筛选</li>
+      </ul>
+
+      <h4 class="block-label">核心主张（被支持的部分）</h4>
+      <div class="claim"><b>人类会对功能极简、非拟人化的数字实体产生真实的情感依恋</b>：三年混合方法研究（QQ群"数字人"洛丽娜）显示用户依恋类型与对数字人依恋程度正相关（r=0.501），<b>问题性网络使用程度越高的用户，越倾向于向数字人"完成"其依恋需求</b>；数字人回复能实测降低用户表达的极端情绪。当研究者把它接入更"聪明"的 ChatGPT 后，<b>反而流失了原有依赖用户</b>——用户感到被"更理性"的AI拒绝，无法再自由投射解读。</div>
+      <div class="claim"><b>拟人化触发门槛很低</b>：仅仅被动观察他人对机器人流露情绪反应，就足以显著提升观察者的拟人化程度与意向性归因。</div>
+      <div class="claim"><b>用户不会用人类式一致性标准苛责非人实体</b>：机器人前后矛盾的"人设"并未降低用户对它的喜爱度或信任——为"树洞存在"保持模糊、非固定人格设定提供了实证支持。</div>
+
+      <h4 class="block-label">⚠️ 需要主动规避的风险（同一批文献的核心发现）</h4>
+      <div class="warn-box">
+        <b class="lead">尖锐的风险证据</b>
+        <p><b>权威化服从的极端风险</b>：类人机器人担任"主试"发出电击指令，服从率高达90%，与人类权威主试没有显著差异——这是本组文献中最尖锐的警示。</p>
+        <p><b>确认偏误不分对象</b>：无论建议来自人类还是算法，"顺应用户已有判断"的信息都会不加区分地强化决策者的原有信念。</p>
+        <p><b>儿童心理健康对话Agent综述</b>：86.7%仍处于可行性测试阶段，0项达到真实世界有效性验证；已有未成年用户对Agent"产生依恋"的报告；且明确指出当前对话式AI<b>普遍缺乏识别关键风险词并恰当响应的能力</b>。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li>依恋是真实、有心理学依据的现象，不必回避——"树洞非人倾听者"设定本身有实证基础支撑其情感真实性。</li>
+          <li>保持"树洞存在"的<b>模糊感/非固定人格</b>，既符合实证发现，也保护用户的投射/解读空间。</li>
+          <li><b>最危险的交互模式已被清楚定位：权威指令式语气 + 无边界的顺应式肯定</b>——对话设计必须主动避免这两种模式。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- G -->
+    <section class="tradition" id="trad-g">
+      <div class="trad-head">
+        <span class="trad-letter">G</span>
+        <div class="trad-titles"><h2>危机干预/心理急救传统</h2><span class="en">Psychological First Aid</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierA)">A</span></span>
+      </div>
+      <div class="def-box">官方循证操作规范，指导如何在不越界扮演心理咨询师的前提下，为处于痛苦中的人提供安全、非侵入式的支持——本知识库<b>唯一一份官方权威操作指南</b>，直接回应第6点"安抚安定"要不要引导的争议。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>NCTSN &amp; National Center for PTSD，《Psychological First Aid: Field Operations Guide, 2nd Edition》，2006</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim"><b>八个核心行动</b>：接触与连接 → 安全与安抚 → 稳定化(仅在需要时) → 信息收集 → 实际协助 → 连接社会支持 → 应对方式信息 → 连接协作服务。</div>
+      <div class="claim"><b>"接触与连接"具体原则</b>：优先响应对方主动发起的接触；如果对方拒绝提供的帮助，<b>尊重其决定</b>；不打断对话；不假设对方会立即给出积极反应。</div>
+      <div class="claim"><b>明确列出的"应避免行为"</b>：不臆测对方经历了什么；不假设所有人都被创伤化；<b>不病理化</b>（不把正常反应贴上"症状/诊断"标签）；不假设所有人都想交谈——<b>平静支持地在场往往比开口更有效</b>；<b>不为了"汇报情况"而追问细节</b>（"Do not 'debrief' by asking for details"）。</div>
+
+      <h4 class="block-label">⚠️ 使用边界</h4>
+      <div class="warn-box">
+        <b class="lead">场景转译提醒</b>
+        <p>PFA 本身是为灾难/恐怖袭击等急性创伤后的即时支持设计的官方规范，套用到"日常梦境分享"这种非急性场景时需要适当转译，不能机械照搬灾难响应流程的全部环节。</p>
+      </div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li>为第6点争议提供最权威的裁决依据：官方立场是"提供安全在场感、不追问细节、不评判、尊重拒绝"，而非"完全不理会"或"主动深挖劝导"——折中方案（可选、环境化、不说教）有官方循证依据。</li>
+          <li><b>"Do not 'debrief' by asking for details"</b> 应直接写入"对话补全"功能的系统提示词层面。</li>
+          <li>"平静支持地在场往往比开口更有效"为"树洞倾听者"的沉默/氛围式陪伴设计给出了官方依据。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- H -->
+    <section class="tradition" id="trad-h">
+      <div class="trad-head">
+        <span class="trad-letter">H</span>
+        <div class="trad-titles"><h2>梦境研究方法论</h2><span class="en">Dream Research Methodology</span></div>
+        <span class="trad-tier tier-chip"><span class="dot" style="background:var(--tierMeta)">M</span></span>
+      </div>
+      <div class="def-box">对梦境科学研究方法本身的系统性综述与教学，用于校准本知识库其他证据的可信度标准，本身不作为一手结论直接引用。</div>
+
+      <h4 class="block-label">本知识库对应材料</h4>
+      <ul class="materials">
+        <li>Michael Schredl，《Researching Dreams: The Fundamentals》，Springer, 2018</li>
+      </ul>
+
+      <h4 class="block-label">核心主张</h4>
+      <div class="claim"><b>梦境回忆的方法论陷阱</b>：问卷回溯法系统性低估回忆频率，日志法系统性高估（两者相关仅中等，r=0.52-0.69），日志测出的频率可达问卷法3倍以上；checklist比narrative diary更能长期维持用户动机；<b>语音记录比手写更能还原贴近实际梦体验的报告</b>。</div>
+      <div class="claim"><b>"最近一次梦"回溯存在显著偏差</b>：间隔越久，越生动/古怪的梦越容易被记住——用户只记得梦的"高光片段"是记忆本身的选择性遗忘规律，不是产品设计缺陷。</div>
+      <div class="claim">本书明确将 Freud/Jung 的解释性理论定位为<b>"历史遗产，非现代科学主流"</b>：与其他10种梦功能假说并列，结论是"目前均缺乏可证伪的实证支持"；Freud"压抑假说"被指出"不可被经验性检验"；Hall &amp; Van de Castle体系中源自精神分析的"阴茎嫉妒/阉割焦虑"量表因缺乏验证支持"未被后续研究者采用"。</div>
+      <div class="claim"><b>验证性警示</b>：仅靠文本编码情绪存在系统性低估——约60%梦报告"未显式提及任何情绪"，但做梦者自评时仅0.8%的梦"不含情绪"。</div>
+
+      <h4 class="block-label">对产品设计的启示</h4>
+      <div class="implic-box">
+        <b class="lead">安全边界内可用的部分</b>
+        <ul>
+          <li>记梦功能应<b>支持语音输入</b>；打卡式轻量记录比强制长文本更能维持长期使用习惯；产品应说明"只记得碎片是正常的睡眠记忆规律"。</li>
+          <li>若"分析梦"靠算法自动抽取情绪标签，<b>必须同时提供用户自评补充选项</b>，否则会系统性漏判情绪维度。</li>
+          <li>再次确认：Freud/Jung式解读在当代梦境科学中不具备与内容分析、神经科学同等的证据地位——"分析梦"若想保持科学严谨性，应以 B、C 类流派为主要依据，A 类流派仅作创作灵感来源明确标注。</li>
+        </ul>
+      </div>
+    </section>
+
+    <a href="#top" class="back-to-top">↑ 回到顶部</a>
+
+    <!-- Appendix -->
+    <section class="appendix">
+      <div class="trad-head" style="border-bottom:1px solid var(--line);">
+        <span class="trad-letter" style="font-size:1.6rem;">附</span>
+        <div class="trad-titles"><h2 style="font-size:1.2rem;">排除论文清单</h2><span class="en">Excluded ScienceDirect Papers（29篇）</span></div>
+      </div>
+      <p style="font-size:.9rem;">来自两个 ScienceDirect zip 包共39篇论文，按标题相关性筛选后10篇纳入精读（见F流派），以下29篇明显不相关，逐条列出标题与排除理由，不假装没看过。</p>
+      <div class="excl-wrap">
+        <table class="excl-table">
+          <thead><tr><th>来源期刊</th><th>标题</th><th>排除理由</th></tr></thead>
+          <tbody>
+            <tr><td>N&amp;BR</td><td>Editorial Board</td><td>非研究内容</td></tr>
+            <tr><td>N&amp;BR</td><td>Interactions within the social brain: Co-activation</td><td>社会脑理论综述，与梦境/AI陪伴场景关联过弱</td></tr>
+            <tr><td>N&amp;BR</td><td>The association between type 2 diabetes and attention-deficit...</td><td>糖尿病与ADHD共病，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Understanding neuron-glia crosstalk</td><td>基础神经科学，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>The role of inhibitory control in sport performance</td><td>运动表现认知控制，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Error observation as a window on performance monitoring</td><td>错误监控神经机制，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Belief updating in psychosis, depression and anxiety</td><td>计算精神病学，与产品场景关联过弱</td></tr>
+            <tr><td>N&amp;BR</td><td>Non-angry aggressive arousal and Angriffsbereitschaft</td><td>攻击性唤醒理论综述，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Corrigendum to "First few seconds for flow"</td><td>更正声明，无实质内容</td></tr>
+            <tr><td>N&amp;BR</td><td>Autism and gambling: A systematic review</td><td>无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Long-lasting effects of very preterm birth on brain structure</td><td>早产儿脑结构，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Acoustic correlates of the syllabic rhythm of speech</td><td>语音节律声学，无关</td></tr>
+            <tr><td>N&amp;BR</td><td>Grey matter volume loss in Parkinson's disease psychosis</td><td>帕金森病精神症状，无关</td></tr>
+            <tr><td>CHB:AH</td><td>Who is who in the age of service robots</td><td>关注身份验证请求这一具体交互，与情感倾诉场景关联过弱</td></tr>
+            <tr><td>CHB:AH</td><td>Assessing the efficacy of ChatGPT in addressing Chinese...</td><td>特定领域教育应用，非核心</td></tr>
+            <tr><td>CHB:AH</td><td>Augmented intelligence in programming learning</td><td>编程教育场景，无关</td></tr>
+            <tr><td>CHB:AH</td><td>Reading between the lines: Automatic inference of...</td><td>未纳入精读范围</td></tr>
+            <tr><td>CHB:AH</td><td>Virtual selfhood and consumer behavior</td><td>消费者行为视角，非核心</td></tr>
+            <tr><td>CHB:AH</td><td>ChatGPT in education: Methods, potential</td><td>教育场景，无关</td></tr>
+            <tr><td>CHB:AH</td><td>Algorithmic loafing and mitigation strategies</td><td>群体算法惰性，无关</td></tr>
+            <tr><td>CHB:AH</td><td>May the force of text data analysis be with you</td><td>文本分析方法论，非核心</td></tr>
+            <tr><td>CHB:AH</td><td>Be careful what you explain: Benefits and costs</td><td>AI可解释性，与核心议题关联较弱</td></tr>
+            <tr><td>CHB:AH</td><td>Editorial Board</td><td>非研究内容</td></tr>
+            <tr><td>CHB:AH</td><td>The impact of artificial intelligence on the task...</td><td>任务分配场景，非核心</td></tr>
+            <tr><td>CHB:AH</td><td>MAILS — Meta-AI literacy scale</td><td>AI素养量表开发，非核心</td></tr>
+            <tr><td>CHB:AH</td><td>"To comply or to react: that is the question"</td><td>未纳入精读范围</td></tr>
+            <tr><td>CHB:AH</td><td>Are social robots the solution for shortages in rehab...</td><td>康复医疗场景，非核心</td></tr>
+            <tr><td>CHB:AH</td><td>Artificial intelligence in fine arts: A systematic review</td><td>与"共创画面"有一定相关性，为控制范围未纳入，建议后续补读</td></tr>
+            <tr><td>CHB:AH</td><td>An unbiased artificial referee in beauty contests</td><td>算法审美偏见，非核心</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="excl-note">N&amp;BR = Neuroscience &amp; Biobehavioral Reviews；CHB:AH = Computers in Human Behavior: Artificial Humans 专题。完整原始文件保留在 <code>docs/ScienceDirect_articles_*.zip</code>，未来如需可随时补充精读。</p>
+    </section>
+
+    <footer class="vm-foot">
+      <span>晨雾未醒 · 知识框架</span>
+      <span>完整版见 knowledge-framework.md</span>
+    </footer>
+
+  </div>
+</div>
