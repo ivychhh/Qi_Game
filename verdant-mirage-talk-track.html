@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>晨雾未醒 Verdant Mirage · 3 分钟讲稿</title>
+  <meta name="description" content="晨雾未醒 Verdant Mirage 黑客松 3 分钟讲稿 / Talk Track">
+  <style>
+    :root {
+      /* ---- fonts ---- */
+      --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
+      --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+
+      /* ---- fixed decorative accents ---- */
+      --plume-g: 143 190 108;
+      --plume-o: 232 145 60;
+
+      /* ---- calm DAWN palette (static, for reading legibility) ---- */
+      --bg-a: 250 236 212;
+      --bg-b: 240 230 216;
+      --bg-c: 224 224 210;
+      --ink: 43 54 66;
+      --ink-soft: 86 96 104;
+      --ink-dim: 130 138 144;
+      --accent: 176 88 50;
+      --line: 92 80 68;
+      --panel: 120 110 96;
+      --foliage-far: 158 176 146;
+      --foliage-mid: 128 156 114;
+      --foliage-near: 104 138 92;
+      --branch: 176 96 68;
+      --berry: 178 80 96;
+      --glow-warm: 248 210 150;
+      --glow-cool: 214 204 222;
+      --halo: 255 250 240;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: rgb(var(--bg-b));
+      color: rgb(var(--ink));
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ---------- atmospheric backdrop ---------- */
+    .backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .backdrop::after {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(48% 42% at 22% 82%, rgb(var(--glow-warm) / .24), transparent 70%),
+        radial-gradient(40% 38% at 74% 20%, rgb(var(--line) / .10), transparent 70%),
+        radial-gradient(55% 50% at 88% 78%, rgb(var(--glow-cool) / .18), transparent 72%),
+        linear-gradient(160deg, rgb(var(--bg-a)) 0%, rgb(var(--bg-b)) 45%, rgb(var(--bg-c)) 100%);
+    }
+    .scene { position: absolute; inset: -2%; width: 104%; height: 104%; z-index: 1; opacity: .9; }
+    .foliage-far { fill: rgb(var(--foliage-far)); stroke: rgb(var(--foliage-far)); }
+    .foliage-mid { fill: rgb(var(--foliage-mid)); stroke: rgb(var(--foliage-mid)); }
+    .foliage-near { fill: rgb(var(--foliage-near)); stroke: rgb(var(--foliage-near)); }
+    .branches { stroke: rgb(var(--branch)); }
+    .berries { fill: rgb(var(--berry)); }
+    .mist-layer {
+      position: absolute; inset: 0; z-index: 2;
+      background:
+        radial-gradient(62% 44% at 50% 22%, rgba(255,250,240,.34), transparent 72%),
+        linear-gradient(180deg, rgba(255,248,236,.22), transparent 42%);
+      mix-blend-mode: screen;
+    }
+    .fireflies { position: absolute; inset: 0; z-index: 3; }
+    .firefly {
+      position: absolute; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,244,200,.9), rgba(255,214,120,.5) 42%, transparent 72%);
+      filter: blur(.3px); opacity: 0;
+      animation: drift var(--dur,16s) ease-in-out var(--delay,0s) infinite;
+    }
+    @keyframes drift {
+      0% { transform: translate(0,0) scale(.6); opacity: 0; }
+      14% { opacity: var(--peak,.7); }
+      50% { transform: translate(var(--dx,40px), var(--dy,-60px)) scale(1); opacity: var(--peak,.7); }
+      82% { opacity: calc(var(--peak,.7) * .45); }
+      100% { transform: translate(calc(var(--dx,40px)*.4), calc(var(--dy,-60px)*1.4)) scale(.7); opacity: 0; }
+    }
+
+    /* ---------- reading progress ---------- */
+    .progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, rgb(var(--accent)), rgb(var(--plume-o)));
+      z-index: 20; transition: width .08s linear;
+    }
+
+    /* ---------- layout ---------- */
+    .wrap { position: relative; z-index: 5; max-width: 820px; margin: 0 auto; padding: 0 24px; }
+
+    /* hero */
+    .hero {
+      min-height: 86vh; min-height: 86dvh;
+      display: flex; flex-direction: column; justify-content: center;
+      text-align: center; padding: 60px 24px 40px;
+    }
+    .eyebrow {
+      font-family: var(--mono); font-size: .74rem; letter-spacing: .34em;
+      text-transform: uppercase; color: rgb(var(--accent));
+      display: inline-flex; align-items: center; gap: 12px; justify-content: center;
+      margin-bottom: 26px;
+    }
+    .eyebrow::before, .eyebrow::after {
+      content: ""; width: 28px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgb(var(--accent)));
+    }
+    .eyebrow::after { background: linear-gradient(90deg, rgb(var(--accent)), transparent); }
+    .hero h1 {
+      font-family: var(--serif); font-weight: 600; line-height: 1.04;
+      font-size: clamp(2.4rem, 7vw, 4.6rem); letter-spacing: .01em;
+      text-shadow: 0 0 18px rgb(var(--halo) / .35);
+    }
+    .hero .en {
+      display: block; font-family: var(--serif); font-style: italic; font-weight: 500;
+      font-size: clamp(1rem, 2.6vw, 1.7rem); color: rgb(var(--ink-soft));
+      letter-spacing: .08em; margin-top: 18px;
+    }
+    .hero .tagline {
+      font-family: var(--serif); font-style: italic;
+      font-size: clamp(1.1rem, 2.8vw, 1.7rem); color: rgb(var(--accent));
+      margin-top: 34px; letter-spacing: .03em;
+      text-shadow: 0 0 16px rgb(var(--halo) / .3);
+    }
+    .meta {
+      margin-top: 30px; display: inline-flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center;
+      font-family: var(--mono); font-size: .72rem; letter-spacing: .05em; color: rgb(var(--ink-dim));
+    }
+    .meta span { border: 1px solid rgb(var(--line) / .3); border-radius: 30px; padding: 6px 14px; }
+
+    /* sections */
+    section.block { padding: clamp(40px, 7vw, 78px) 0; }
+    .sec-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 26px; }
+    .sec-num {
+      font-family: var(--mono); font-size: clamp(2.2rem, 6vw, 3.4rem);
+      font-weight: 700; color: rgb(var(--accent)); line-height: .9;
+      text-shadow: 0 0 16px rgb(var(--halo) / .3);
+    }
+    .sec-title { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem, 4vw, 2.2rem); }
+    .sec-en {
+      display: block; font-family: var(--serif); font-style: italic; font-weight: 500;
+      font-size: clamp(.85rem, 2vw, 1.05rem); color: rgb(var(--ink-dim));
+      letter-spacing: .06em; margin-top: 4px;
+    }
+    .divider { height: 1px; background: linear-gradient(90deg, rgb(var(--accent) / .5), transparent); margin-top: 4px; }
+
+    .script p {
+      font-family: var(--serif);
+      font-size: clamp(1.12rem, 2.4vw, 1.42rem);
+      line-height: 2.0;
+      color: rgb(var(--ink));
+      margin-bottom: 1.1em;
+      letter-spacing: .01em;
+      text-shadow: 0 0 10px rgb(var(--halo) / .28);
+    }
+    .script p:last-child { margin-bottom: 0; }
+    .script strong { color: rgb(var(--accent)); font-weight: 600; }
+    .script .soft { color: rgb(var(--ink-soft)); }
+
+    /* closing */
+    .closing { text-align: center; padding: clamp(56px, 9vw, 96px) 0; }
+    .closing .big {
+      font-family: var(--serif); font-weight: 600; font-size: clamp(1.6rem, 4.4vw, 2.6rem);
+      line-height: 1.4; color: rgb(var(--ink)); text-shadow: 0 0 16px rgb(var(--halo) / .3);
+    }
+    .closing .en {
+      font-family: var(--serif); font-style: italic; color: rgb(var(--accent));
+      font-size: clamp(1.05rem, 2.6vw, 1.6rem); margin-top: 22px;
+    }
+
+    footer {
+      text-align: center; padding: 50px 24px 70px;
+      font-family: var(--mono); font-size: .66rem; letter-spacing: .16em;
+      text-transform: uppercase; color: rgb(var(--ink-dim));
+    }
+    footer a { color: rgb(var(--accent)); text-decoration: none; }
+
+    /* reveal on scroll */
+    .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .firefly { display: none; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 3px; }
+  </style>
+</head>
+
+<body>
+
+  <div class="progress" id="progress"></div>
+
+  <div class="backdrop" aria-hidden="true">
+    <svg class="scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <symbol id="leaf" viewBox="-40 -62 80 124">
+          <path d="M0,-58 C22,-42 24,38 0,58 C-24,38 -22,-42 0,-58 Z" />
+          <path d="M0,-50 L0,52" stroke-width="1.4" fill="none" opacity=".5" />
+        </symbol>
+        <symbol id="fan" viewBox="-60 -8 120 82">
+          <g>
+            <path d="M0,72 L-52,6" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L-34,-2" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L-14,-6" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L6,-6" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L26,-2" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L46,8" stroke-width="6" stroke-linecap="round" />
+            <path d="M0,72 L56,26" stroke-width="6" stroke-linecap="round" />
+          </g>
+        </symbol>
+        <radialGradient id="vg" cx="50%" cy="45%" r="55%">
+          <stop offset="0%" stop-color="#F1BC55" stop-opacity=".9" />
+          <stop offset="45%" stop-color="#E8913C" stop-opacity=".45" />
+          <stop offset="100%" stop-color="#E8913C" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+      <g class="foliage-far">
+        <use href="#fan" x="70" y="60" width="360" height="246" opacity=".5" transform="rotate(-8 250 180)" />
+        <use href="#fan" x="1050" y="520" width="420" height="287" opacity=".45" transform="rotate(6 1260 660)" />
+        <use href="#leaf" x="1180" y="80" width="150" height="232" opacity=".5" transform="rotate(24 1255 196)" />
+        <use href="#leaf" x="120" y="560" width="150" height="232" opacity=".5" transform="rotate(-18 195 676)" />
+      </g>
+      <g class="foliage-mid">
+        <use href="#fan" x="-40" y="360" width="420" height="287" opacity=".62" transform="rotate(10 170 500)" />
+        <use href="#leaf" x="980" y="40" width="150" height="232" opacity=".55" transform="rotate(30 1055 156)" />
+        <use href="#leaf" x="300" y="30" width="130" height="201" opacity=".5" transform="rotate(-12 365 130)" />
+        <use href="#leaf" x="1300" y="600" width="150" height="232" opacity=".55" transform="rotate(-26 1375 716)" />
+      </g>
+      <g class="branches" fill="none" stroke-linecap="round" opacity=".7">
+        <path d="M-20,250 C260,300 420,180 720,240" stroke-width="9" />
+        <path d="M300,235 C340,180 360,150 430,120" stroke-width="6" />
+        <path d="M1460,640 C1180,600 980,720 640,700" stroke-width="9" />
+        <path d="M980,712 C960,760 940,800 900,840" stroke-width="6" />
+      </g>
+      <g class="berries">
+        <circle cx="452" cy="120" r="12" />
+        <circle cx="905" cy="836" r="12" />
+      </g>
+      <g class="foliage-near">
+        <use href="#fan" x="1120" y="-30" width="480" height="328" opacity=".72" transform="rotate(-6 1360 130)" />
+        <use href="#leaf" x="40" y="10" width="180" height="279" opacity=".62" transform="rotate(-8 130 150)" />
+        <use href="#leaf" x="1240" y="360" width="170" height="263" opacity=".62" transform="rotate(18 1325 490)" />
+      </g>
+      <circle cx="360" cy="640" r="30" fill="url(#vg)" opacity=".5" />
+      <circle cx="1080" cy="470" r="22" fill="url(#vg)" opacity=".5" />
+    </svg>
+    <div class="mist-layer"></div>
+    <div class="fireflies" id="fireflies"></div>
+  </div>
+
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Hackathon · 3 分钟讲稿</p>
+      <h1>晨雾未醒<span class="en">Verdant Mirage — Talk Track</span></h1>
+      <p class="tagline">森林的雾还未散，都还来得及。</p>
+      <div class="meta">
+        <span>演讲时长 ≈ 3 分钟</span>
+        <span>8 个段落</span>
+        <span>晨雾未醒 · Verdant Mirage</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section class="block reveal" id="s1">
+      <div class="sec-head">
+        <span class="sec-num">01</span>
+        <div>
+          <div class="sec-title">开场</div>
+          <span class="sec-en">The Opening</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>我们做的不是一款解梦器。</p>
+        <p>我们想做的是一个让人能<strong>安全地重新走进梦里</strong>的私密游戏空间：<strong>晨雾未醒 Verdant Mirage</strong>。</p>
+        <p>它把醒来即逝的梦，变成一个可以<strong>再次进入、探索、保存或放下</strong>的世界。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s2">
+      <div class="sec-head">
+        <span class="sec-num">02</span>
+        <div>
+          <div class="sec-title">问题</div>
+          <span class="sec-en">The Problem</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>很多梦只剩下一束光、一个场景、一个画面，和说不清的感受。</p>
+        <p>传统日记能记下文字，但<strong>留不住触感</strong>；通用 AI 又很容易<strong>急着给出解释</strong>。</p>
+        <p>所以我们的原则是：<strong>不替用户解释梦</strong>，把解释权和离开的权利交还给梦者。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s3">
+      <div class="sec-head">
+        <span class="sec-num">03</span>
+        <div>
+          <div class="sec-title">非人倾听者</div>
+          <span class="sec-en">The Non-human Listener</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>进入森林、海边或岩洞后，用户会遇见同一个"倾听者"的不同显形。</p>
+        <p>它不是真人，也不是神谕。它<strong>只知道用户亲手交给它的东西</strong>。</p>
+        <p>它只做四件事：<strong>准确复述、问一个中性问题、陪伴沉默、打开一扇门</strong>，把选择还给用户。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s4">
+      <div class="sec-head">
+        <span class="sec-num">04</span>
+        <div>
+          <div class="sec-title">体验闭环</div>
+          <span class="sec-en">The Loop</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>用户先用语音或碎片文字捕梦，再通过<strong>几句非诱导对话</strong>校正细节。</p>
+        <p>确认后的原梦会被冻结；用户联想和 AI 共创内容<strong>单独标记、单独保存</strong>。之后才生成画面、声音、触感和可探索的场景。</p>
+        <p>关键是：<strong>AI 的续写永远不会冒充用户真实梦见过的内容</strong>。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s5">
+      <div class="sec-head">
+        <span class="sec-num">05</span>
+        <div>
+          <div class="sec-title">游戏不是强迫面对</div>
+          <span class="sec-en">No Forced Confrontation</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>同一个梦，没有标准走法。</p>
+        <p>被追赶时，用户可以潜行、交谈或改写出口；坠落时可以跳跃、滑翔或自由漂浮；梦很碎时可以拼贴，也可以选择保持空白。</p>
+        <p>我们不要求用户"战胜"什么。可以<strong>靠近、绕开、改变，或直接离开</strong>。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s6">
+      <div class="sec-head">
+        <span class="sec-num">06</span>
+        <div>
+          <div class="sec-title">安全与隐私</div>
+          <span class="sec-en">Safety &amp; Privacy</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>安全不是体验结束才出现的免责声明。</p>
+        <p>梦境默认在<strong>本地加密留档</strong>，用户可随时清除；原梦、联想、共创内容分层保存。</p>
+        <p>对于自伤、自杀等信号，关键词只做初筛。我们会结合语义、上下文和二次确认；确认高风险后<strong>暂停沉浸式探索</strong>，进入安抚、现实定向和求助入口。</p>
+        <p>我们<strong>明确不做诊断或治疗</strong>。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s7">
+      <div class="sec-head">
+        <span class="sec-num">07</span>
+        <div>
+          <div class="sec-title">结尾由用户决定</div>
+          <span class="sec-en">The Ending, Yours to Choose</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>结束时，用户有三种选择：</p>
+        <p><span class="soft">留给世界——</span>让萤火瓶、气泡或水晶被场景保管；</p>
+        <p><span class="soft">化作雾光——</span>二次确认后删除；</p>
+        <p><span class="soft">带走——</span>不留在应用，把容器交还给用户。</p>
+        <p>默认保存；中途退出会成为一枚可继续、可删除的<strong>"未完成的梦"</strong>。</p>
+      </div>
+    </section>
+
+    <section class="block reveal" id="s8">
+      <div class="sec-head">
+        <span class="sec-num">08</span>
+        <div>
+          <div class="sec-title">收束</div>
+          <span class="sec-en">Closing</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="script">
+        <p>晨雾未醒<strong>不是要解释梦的真相</strong>。</p>
+        <p>我们想做的是让人决定：<strong>如何记住自己，或者如何安心地遗忘</strong>。</p>
+        <p>下一步，我们希望把第一个 60 秒原型交给<strong>真正的梦者</strong>。</p>
+      </div>
+    </section>
+
+    <section class="closing reveal">
+      <p class="big">森林的雾还未散，<br>都还来得及。</p>
+      <p class="en">Verdant Mirage — walk into your dream.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <a href="verdant-mirage-pitch-v2.html">查看配套 Pitch Deck →</a><br><br>
+    晨雾未醒 · Verdant Mirage
+  </footer>
+
+  <script>
+    (function () {
+      /* reading progress */
+      var bar = document.getElementById('progress');
+      function onScroll() {
+        var h = document.documentElement;
+        var max = h.scrollHeight - h.clientHeight;
+        var p = max > 0 ? (h.scrollTop || document.body.scrollTop) / max : 0;
+        bar.style.width = (p * 100).toFixed(2) + '%';
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      /* reveal on scroll */
+      var items = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+          });
+        }, { threshold: 0.12 });
+        items.forEach(function (el) { io.observe(el); });
+      } else {
+        items.forEach(function (el) { el.classList.add('in'); });
+      }
+
+      /* subtle fireflies (skip when reduced motion) */
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var box = document.getElementById('fireflies');
+      if (!reduce && box) {
+        var small = window.matchMedia('(max-width:760px)').matches;
+        var N = small ? 7 : 12;
+        for (var i = 0; i < N; i++) {
+          var e = document.createElement('span');
+          e.className = 'firefly';
+          var size = (2 + Math.random() * 4).toFixed(1);
+          e.style.left = (Math.random() * 100).toFixed(1) + '%';
+          e.style.top = (38 + Math.random() * 56).toFixed(1) + '%';
+          e.style.width = size + 'px';
+          e.style.height = size + 'px';
+          e.style.setProperty('--dx', ((Math.random() * 2 - 1) * 80).toFixed(0) + 'px');
+          e.style.setProperty('--dy', (-(30 + Math.random() * 90)).toFixed(0) + 'px');
+          e.style.setProperty('--dur', (12 + Math.random() * 10).toFixed(1) + 's');
+          e.style.setProperty('--delay', (-Math.random() * 22).toFixed(1) + 's');
+          e.style.setProperty('--peak', (0.4 + Math.random() * 0.4).toFixed(2));
+          box.appendChild(e);
+        }
+      }
+    })();
+  </script>
+</body>
+
+</html>
