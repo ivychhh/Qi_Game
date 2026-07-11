@@ -34,6 +34,7 @@
       --berry: 178 80 96;
       --glow-warm: 248 210 150;
       --glow-cool: 214 204 222;
+      --halo: 255 250 240;
       /* scalars */
       --glow: .05;
       --mist: 1;
@@ -339,6 +340,16 @@
 
     .accent {
       color: rgb(var(--accent));
+    }
+
+    /* adaptive text halo — tight rim (contrasts the ink via bg-c) + soft dreamy glow.
+       Keeps text legible & comfortable through the muddy day↔night crossover. */
+    .display, .big, .tagline, .en-sub, .lead,
+    .points li, .close-line, .eyebrow,
+    .card h3, .loop .node, .stat .n {
+      text-shadow:
+        0 0 3px rgb(var(--bg-c) / .6),
+        0 0 18px rgb(var(--halo) / .30);
     }
 
     .footnote {
@@ -957,7 +968,7 @@
             '--line': [92, 80, 68], '--panel': [120, 110, 96],
             '--foliage-far': [158, 176, 146], '--foliage-mid': [128, 156, 114], '--foliage-near': [104, 138, 92],
             '--branch': [176, 96, 68], '--berry': [178, 80, 96],
-            '--glow-warm': [248, 210, 150], '--glow-cool': [214, 204, 222],
+            '--glow-warm': [248, 210, 150], '--glow-cool': [214, 204, 222], '--halo': [255, 250, 240],
             '--glow': 0.05, '--mist': 1
           }
         },
@@ -970,7 +981,7 @@
             '--line': [96, 78, 62], '--panel': [128, 108, 88],
             '--foliage-far': [150, 158, 120], '--foliage-mid': [126, 140, 96], '--foliage-near': [104, 124, 80],
             '--branch': [176, 86, 58], '--berry': [176, 72, 84],
-            '--glow-warm': [246, 196, 120], '--glow-cool': [210, 190, 180],
+            '--glow-warm': [246, 196, 120], '--glow-cool': [210, 190, 180], '--halo': [255, 246, 226],
             '--glow': 0.35, '--mist': 0.5
           }
         },
@@ -983,7 +994,7 @@
             '--line': [190, 204, 216], '--panel': [120, 146, 162],
             '--foliage-far': [58, 74, 98], '--foliage-mid': [66, 88, 110], '--foliage-near': [78, 100, 120],
             '--branch': [182, 86, 68], '--berry': [168, 68, 90],
-            '--glow-warm': [236, 158, 78], '--glow-cool': [130, 110, 150],
+            '--glow-warm': [236, 158, 78], '--glow-cool': [130, 110, 150], '--halo': [250, 228, 176],
             '--glow': 0.6, '--mist': 0.2
           }
         },
@@ -996,7 +1007,7 @@
             '--line': [203, 215, 224], '--panel': [124, 151, 166],
             '--foliage-far': [51, 70, 92], '--foliage-mid': [62, 84, 104], '--foliage-near': [74, 96, 116],
             '--branch': [178, 74, 60], '--berry': [158, 59, 82],
-            '--glow-warm': [232, 145, 60], '--glow-cool': [110, 90, 130],
+            '--glow-warm': [232, 145, 60], '--glow-cool': [110, 90, 130], '--halo': [255, 232, 176],
             '--glow': 1, '--mist': 0
           }
         }
