@@ -48,6 +48,23 @@
     font-size:.7rem; padding:8px 14px; display:none; white-space:pre-wrap;
   }
 
+  /* video entry layer */
+  #video-layer{
+    position:fixed; z-index:55; background:#000;
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity 1.4s ease;
+  }
+  #video-layer.fading{ opacity:0; pointer-events:none; }
+  #video-layer video{ display:block; object-fit:cover; }
+
+  #video-skip{
+    position:fixed; left:0; right:0; bottom:calc(28px + env(safe-area-inset-bottom)); text-align:center; z-index:56;
+    font-family:var(--serif); font-size:.75rem; letter-spacing:.34em; text-indent:.34em;
+    color:rgba(255,255,255,.45); opacity:0; transition:opacity 1s ease; cursor:pointer;
+  }
+  #video-skip.on{ opacity:1; }
+
+  /* scene UI */
   #pill{
     position:fixed; z-index:25; right:14px; bottom:calc(14px + env(safe-area-inset-bottom));
     background:rgba(10, 18, 16, .72); border:1px solid rgba(255,255,255,.14); border-radius:22px;
@@ -62,6 +79,10 @@
 <body>
 
 <canvas id="stage"></canvas>
+<div id="video-layer" aria-hidden="true">
+  <video id="entry-video" muted playsinline autoplay src="../开屏动画5.mp4"></video>
+</div>
+<div id="video-skip" aria-hidden="true">轻触跳过</div>
 <div id="fade" aria-hidden="true"></div>
 <div id="error-bar" aria-live="assertive"></div>
 <div id="title" aria-hidden="true">
@@ -183,7 +204,8 @@ const cx2 = cv.getContext('2d');
 let W=0, H=0, DPR=1, BLEED=56;
 let effectiveW=0, effectiveH=0;
 let tStart = performance.now();
-let mode = 'fadeIn'; // fadeIn | scene
+let mode = 'video'; // video → fadeIn → scene
+let videoDone = false; // true once video has been shown (session-scope, prevent replay on ?entry=0)
 let geo = null, sprites = [];
 let fogBlobs = [], flies = [], ripples = [];
 let vignette = null, grain = null, fogSprite = null, flySprite = null;
@@ -779,26 +801,147 @@ window.onerror = function(msg, src, line, col, err){
   document.getElementById('error-bar').textContent = 'Error: '+msg+' ('+src+':'+line+')';
 };
 
+/* ---------- video entry layer ---------- */
+const videoLayer = document.getElementById('video-layer');
+const entryVideo = document.getElementById('entry-video');
+const videoSkip = document.getElementById('video-skip');
+let videoTimer = null;
+
+function shouldPlayVideo(){
+  if(reduceMotion) return false;
+  const params = new URLSearchParams(location.search);
+  if(params.get('entry')==='1') return true;
+  if(params.get('entry')==='0') return false;
+  // First visit this session → play; revisit → skip
+  if(sessionStorage.getItem('qi-forest-entry-done')) return false;
+  sessionStorage.setItem('qi-forest-entry-done','1');
+  return true;
+}
+
+function positionVideo(){
+  if(!CONFIG.portraitMode) return;
+  const winW = window.innerWidth||document.documentElement.clientWidth||1024;
+  const winH = window.innerHeight||document.documentElement.clientHeight||768;
+  const ratio = 9/16;
+  let vw, vh;
+  if(winW/winH > ratio){ vw = Math.round(winH*ratio); vh = winH; }
+  else { vw = winW; vh = Math.round(winW/ratio); }
+  videoLayer.style.left = (winW-vw)/2+'px';
+  videoLayer.style.top = (winH-vh)/2+'px';
+  videoLayer.style.width = vw+'px';
+  videoLayer.style.height = vh+'px';
+  videoLayer.style.right = 'auto';
+  videoLayer.style.bottom = 'auto';
+  entryVideo.style.width = vw+'px';
+  entryVideo.style.height = vh+'px';
+}
+
+function videoToFadeIn(instant){
+  // Cleanup video, start existing fadeIn→scene flow
+  clearTimeout(videoTimer);
+  videoLayer.classList.add('fading');
+  videoSkip.classList.remove('on');
+  const delay = instant ? 0 : 1400;
+  setTimeout(()=>{
+    videoLayer.style.display='none';
+    videoDone = true;
+    mode = 'fadeIn';
+    // Canvas already rendering underneath — fade in the scene
+    document.getElementById('fade').style.opacity='0';
+    document.getElementById('title').style.opacity='1';
+    pill.classList.add('on');
+    document.getElementById('hint').style.opacity='1';
+    setTimeout(()=>{
+      document.getElementById('title').style.opacity='0';
+      document.getElementById('hint').style.opacity='0';
+    }, 5000);
+    setTimeout(()=>{
+      document.getElementById('fade').style.display='none';
+      if(mode==='fadeIn') mode='scene';
+    }, 2500);
+  }, delay);
+}
+
+function setupVideo(){
+  positionVideo();
+  videoLayer.style.display='flex';
+  videoLayer.style.opacity='1';
+  videoLayer.classList.remove('fading');
+  videoSkip.classList.add('on');
+
+  // Monitor timeupdate for early crossfade (last 1.2s)
+  function onTimeUpdate(){
+    if(entryVideo.duration && entryVideo.currentTime > entryVideo.duration - 1.3){
+      entryVideo.removeEventListener('timeupdate', onTimeUpdate);
+      videoToFadeIn(false);
+    }
+  }
+  entryVideo.addEventListener('timeupdate', onTimeUpdate, {once: false});
+
+  // Video ended naturally before timeupdate caught it
+  entryVideo.addEventListener('ended', ()=>{
+    if(mode==='video') videoToFadeIn(false);
+  });
+
+  // Playback start
+  const playPromise = entryVideo.play();
+  if(playPromise && playPromise.catch){
+    playPromise.catch(()=>{
+      // autoplay rejected → fallback
+      if(mode==='video') videoToFadeIn(true);
+    });
+  }
+
+  // Load error
+  entryVideo.addEventListener('error', ()=>{
+    if(mode==='video') videoToFadeIn(true);
+  });
+
+  // 3s timeout — if video hasn't started playing by then, fallback
+  videoTimer = setTimeout(()=>{
+    if(mode==='video' && entryVideo.currentTime < 0.1){
+      videoToFadeIn(true);
+    }
+  }, 3000);
+}
+
+// Skip: tap anywhere during video
+function onVideoSkip(e){
+  if(mode!=='video') return;
+  e.preventDefault(); e.stopPropagation();
+  videoToFadeIn(false);
+}
+videoLayer.addEventListener('click', onVideoSkip);
+videoSkip.addEventListener('click', onVideoSkip);
+
+/* ---------- boot ---------- */
 resize();
 requestAnimationFrame(loop);
 
-// Fade in
-setTimeout(()=>{
-  mode = 'scene'; // unlock touch interaction
-  document.getElementById('fade').style.opacity='0';
-  document.getElementById('title').style.opacity='1';
-  pill.classList.add('on');
-  document.getElementById('hint').style.opacity='1';
+if(shouldPlayVideo()){
+  // Canvas renders underneath; video layer starts on top
+  setupVideo();
+  // Pre-warm the canvas scene (it's already running from rAF)
+} else {
+  // Skip video → straight to fadeIn→scene
+  videoLayer.style.display='none';
+  videoDone = true;
+  mode = 'fadeIn';
   setTimeout(()=>{
-    document.getElementById('title').style.opacity='0';
-    document.getElementById('hint').style.opacity='0';
-  }, 5000);
-  // Remove fade div from DOM after transition
-  setTimeout(()=>{
-    const f = document.getElementById('fade');
-    if(f) f.style.display='none';
-  }, 2500);
-}, 200);
+    document.getElementById('fade').style.opacity='0';
+    document.getElementById('title').style.opacity='1';
+    pill.classList.add('on');
+    document.getElementById('hint').style.opacity='1';
+    setTimeout(()=>{
+      document.getElementById('title').style.opacity='0';
+      document.getElementById('hint').style.opacity='0';
+    }, 5000);
+    setTimeout(()=>{
+      document.getElementById('fade').style.display='none';
+      if(mode==='fadeIn') mode='scene';
+    }, 2500);
+  }, 200);
+}
 </script>
 </body>
 </html>
