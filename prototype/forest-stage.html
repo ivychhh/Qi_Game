@@ -674,33 +674,6 @@ function drawFlash(now){
 	  const t = (now - flashT0) / 1000;
 	  const el = document.getElementById('flash');
 	  if(t < 0.35){
-	    // Flash rises — video still visible behind it (z-index:60 > video:55)
-	    el.style.opacity = (t / 0.35).toFixed(3);
-	  } else {
-	    // Flash fades — hide video, render scene underneath
-	    if(!drawFlash._videoHidden){
-	      videoLayer.style.display = 'none';
-	      videoDone = true;
-	      drawFlash._videoHidden = true;
-	    }
-	    if(!drawFlash._sceneReady){
-	      tStart = now;
-	      drawFlash._sceneReady = true;
-	    }
-	    el.style.opacity = Math.max(0, 1 - (t - 0.35) / 1.8).toFixed(3);
-	    drawScene(now);
-	    if(t > 0.9) revealUI();
-	    if(t > 2.3){
-	      mode = 'scene';
-	      el.style.opacity = '0';
-	    }
-	  }
-	}
-
-	function drawFlash(now){
-	  const t = (now - flashT0) / 1000;
-	  const el = document.getElementById('flash');
-	  if(t < 0.35){
 	    el.style.opacity = (t / 0.35).toFixed(3);
 	  } else {
 	    if(!drawFlash._videoHidden){
@@ -722,7 +695,7 @@ function drawFlash(now){
 	  }
 	}
 
-	function drawScene(now){
+function drawScene(now){
   const t=(now-tStart)/1000;
   const period = CONFIG.breathPeriod;
   const amp = CONFIG.breathAmp/100;
@@ -924,7 +897,7 @@ function videoToFlash(instant){
 
 	  // Enter flash ritual (canvas-based, proven in style-lab)
 	  mode = 'flash';
-	  flashT0 = instant ? performance.now() + 0.35 : performance.now();
+	  flashT0 = instant ? performance.now() + 350 : performance.now();
 	  drawFlash._videoHidden = false;
 	  drawFlash._sceneReady = false;
 	}
