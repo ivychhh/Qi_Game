@@ -837,17 +837,26 @@ function positionVideo(){
 }
 
 function videoToFadeIn(instant){
-  // Cleanup video, start existing fadeIn→scene flow
+  // Guard against double handoff (timeupdate + ended race)
+  if(mode!=='video') return;
   clearTimeout(videoTimer);
+  entryVideo.pause();
+
+  // Immediately reveal the canvas scene underneath — the canvas has been
+  // rendering from rAF frame 1, so crossfade is: video opacity→0 over canvas.
+  document.getElementById('fade').style.opacity='0';
+  document.getElementById('fade').style.display='none';
+
+  // Start video layer fade-out
+  const delay = instant ? 0 : 1400;
   videoLayer.classList.add('fading');
   videoSkip.classList.remove('on');
-  const delay = instant ? 0 : 1400;
+
   setTimeout(()=>{
     videoLayer.style.display='none';
     videoDone = true;
     mode = 'fadeIn';
-    // Canvas already rendering underneath — fade in the scene
-    document.getElementById('fade').style.opacity='0';
+    // Scene is already visible — just show UI
     document.getElementById('title').style.opacity='1';
     pill.classList.add('on');
     document.getElementById('hint').style.opacity='1';
@@ -856,7 +865,6 @@ function videoToFadeIn(instant){
       document.getElementById('hint').style.opacity='0';
     }, 5000);
     setTimeout(()=>{
-      document.getElementById('fade').style.display='none';
       if(mode==='fadeIn') mode='scene';
     }, 2500);
   }, delay);
@@ -880,7 +888,7 @@ function setupVideo(){
 
   // Video ended naturally before timeupdate caught it
   entryVideo.addEventListener('ended', ()=>{
-    if(mode==='video') videoToFadeIn(false);
+    videoToFadeIn(false);
   });
 
   // Playback start
