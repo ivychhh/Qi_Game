@@ -322,10 +322,10 @@ const CONFIG = {
   strokeWidth: 0,   // 0-100  0=off
 
   // view
-  portraitMode: false,
+  portraitMode: true,
 };
 
-/* ---------- base palettes (unshifted, forest reference from AGENTS.md §3) ---------- */
+/* ---------- base palettes (four mood presets — 青雾 is the default starting point) ---------- */
 const BASE_PALETTES = {
   '青雾': {
     sky:['#0B2429','#17454A','#2C6B6B'], glow:'#C8F0E4',
@@ -516,6 +516,7 @@ function hangBranch(ctx,x0,drop,segs,color,accent,rand){
    scene build — geometry (seeded)
    ============================================================ */
 function buildGeometry(){
+  listener.rx = 0; // reset — will be set by renderLayerSprite if a listener trunk exists
   const rand = mulberry32(20260712);
   const portrait = effectiveH > effectiveW;
   const g = { layers:[[],[],[],[],[],[]], rand };
@@ -570,7 +571,8 @@ function renderLayerSprite(k){
   c.width = w*DPR; c.height = h*DPR;
   const ctx = c.getContext('2d');
   ctx.scale(DPR,DPR); ctx.translate(BLEED,BLEED);
-  const col = pal().layers[k]||pal().layers[0];
+  const pcols = pal().layers;
+  const col = pcols[k]||pcols[pcols.length-1];
   const fogged = mix(col, pal().fog, k===0?.12:k===1?.04:0);
   ctx.fillStyle = fogged;
   if(CONFIG.strokeWidth>0){
@@ -725,7 +727,7 @@ function drawFogBand(ctx,band,t,breath){
   const base=(CONFIG.fog/100)*1.15;
   if(base<=0.01) return;
   const spdMult = CONFIG.fogSpeed;
-  const motMult = (reduceMotion?.15:1);
+  const motMult = reduceMotion ? 0 : 1;
   for(const b of fogBlobs){
     if(b.band!==band) continue;
     let bx=(b.x + t*b.sp*spdMult*motMult)%1.4; if(bx<-.2)bx+=1.4;
@@ -748,7 +750,7 @@ function drawFlies(ctx,t){
       fx=lerp(f.sx,f.target[0],easeInOut(f.tp)); fy=lerp(f.sy,f.target[1],easeInOut(f.tp));
       if(f.tp>=1){ f.x=fx/W; f.y=fy/H; f.target=null; }
     } else {
-      const wob=reduceMotion?.12:1;
+      const wob=reduceMotion?0:1;
       fx=(f.x + Math.sin(t*f.s1*.35*spd+f.a1)*.015*range*wob)*W;
       fy=(f.y + Math.sin(t*f.s2*.28*spd+f.a2)*.02*range*wob)*H;
     }
@@ -812,10 +814,12 @@ function drawScene(now){
   const nLayers = CONFIG.parallaxLayers;
 
   skyPaint(cx2,1+.06*breath);
-  shafts(cx2,t);
+  if(!reduceMotion) shafts(cx2,t);
+
+  // Fog bands — drawn independently of parallax layer count
+  if(CONFIG.fogLayers>=1) drawFogBand(cx2,0,t,breath);
 
   for(let k=0;k<nLayers;k++){
-    if(k===1 && CONFIG.fogLayers>=1) drawFogBand(cx2,0,t,breath);
     if(k===3 && CONFIG.fogLayers>=2) drawFogBand(cx2,1,t,breath);
     cx2.save();
     const s=1+BAMP_ALL[k]*breath;
@@ -831,7 +835,7 @@ function drawScene(now){
   drawRipples(cx2,t);
   cx2.drawImage(vignette,0,0,W,H);
   cx2.globalAlpha=.05;
-  cx2.drawImage(grain,((t*7)%128)-128,((t*3)%128)-128,W+256,H+256);
+  cx2.drawImage(grain, reduceMotion?0:((t*7)%128)-128, reduceMotion?0:((t*3)%128)-128, W+256, H+256);
   cx2.globalAlpha=1;
 }
 
@@ -1133,9 +1137,11 @@ $('btn-import').addEventListener('click',()=>{
     }
     delete CONFIG.savedAt;
     configToDOM();
+    updateFullscreenButton();
     invalidatePalette();
-    rebuildAll();
     presetModal.classList.remove('on');
+    // Must call resize() so that portraitMode + parallaxLayers take effect
+    resize();
   } catch(e){
     toast('JSON 解析失败，请检查格式');
   }
@@ -1164,15 +1170,14 @@ $('pill').addEventListener('click',()=>{
 // Fullscreen / portrait toggle
 $('fullscreen-toggle').addEventListener('click',()=>{
   CONFIG.portraitMode = !CONFIG.portraitMode;
-  const btn = $('fullscreen-toggle');
-  btn.textContent = CONFIG.portraitMode ? '◧ 竖屏' : '◧ 全屏';
+  updateFullscreenButton();
   resize();
 });
 updateFullscreenButton();
 
 function updateFullscreenButton(){
   const btn = $('fullscreen-toggle');
-  if(btn) btn.textContent = CONFIG.portraitMode ? '◧ 竖屏' : '◧ 全屏';
+  if(btn) btn.textContent = CONFIG.portraitMode ? '◧ 切至全屏' : '◧ 切至竖屏';
 }
 
 function toast(msg){
