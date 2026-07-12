@@ -669,31 +669,51 @@ function drawRipples(ctx,t){
 }
 
 const PARX_ALL=[4,9,15,24,34,45], PARY_ALL=[2,4,7,10,14,18], BAMP_ALL=[.0018,.003,.0045,.006,.0085,.011];
+const FLASH_RISE=0.35, FLASH_HOLD=0.6, FLASH_DECAY=3.0;
+const FLASH_END = FLASH_RISE + FLASH_HOLD + FLASH_DECAY; // ~3.95s
 
 function drawFlash(now){
-	  const t = (now - flashT0) / 1000;
-	  const el = document.getElementById('flash');
-	  if(t < 0.35){
-	    el.style.opacity = (t / 0.35).toFixed(3);
-	  } else {
-	    if(!drawFlash._videoHidden){
-	      videoLayer.style.display = 'none';
-	      videoDone = true;
-	      drawFlash._videoHidden = true;
-	    }
-	    if(!drawFlash._sceneReady){
-	      tStart = now;
-	      drawFlash._sceneReady = true;
-	    }
-	    el.style.opacity = Math.max(0, 1 - (t - 0.35) / 1.8).toFixed(3);
-	    drawScene(now);
-	    if(t > 0.9) revealUI();
-	    if(t > 2.3){
-	      mode = 'scene';
-	      el.style.opacity = '0';
-	    }
-	  }
-	}
+  const t = (now - flashT0) / 1000;
+  const el = document.getElementById('flash');
+  const holdStart = FLASH_RISE;
+  const decayStart = FLASH_RISE + FLASH_HOLD;
+
+  if(t < holdStart){
+    // Rise: 0 → 1 over FLASH_RISE
+    el.style.opacity = Math.min(1, t / FLASH_RISE).toFixed(3);
+  } else if(t < decayStart){
+    // Hold: full white, video hidden, scene preps underneath
+    el.style.opacity = '1';
+    if(!drawFlash._videoHidden){
+      videoLayer.style.display = 'none';
+      videoDone = true;
+      drawFlash._videoHidden = true;
+    }
+    if(!drawFlash._sceneReady){
+      tStart = now;
+      drawFlash._sceneReady = true;
+    }
+  } else {
+    // Decay: scene slowly emerges through white
+    if(!drawFlash._videoHidden){
+      videoLayer.style.display = 'none';
+      videoDone = true;
+      drawFlash._videoHidden = true;
+    }
+    if(!drawFlash._sceneReady){
+      tStart = now;
+      drawFlash._sceneReady = true;
+    }
+    el.style.opacity = Math.max(0, 1 - (t - decayStart) / FLASH_DECAY).toFixed(3);
+    drawScene(now);
+    if(t > decayStart + 0.55) revealUI();
+  }
+
+  if(t > FLASH_END){
+    mode = 'scene';
+    el.style.opacity = '0';
+  }
+}
 
 function drawScene(now){
   const t=(now-tStart)/1000;
@@ -897,7 +917,7 @@ function videoToFlash(instant){
 
 	  // Enter flash ritual (canvas-based, proven in style-lab)
 	  mode = 'flash';
-	  flashT0 = instant ? performance.now() + 350 : performance.now();
+	  flashT0 = instant ? performance.now() - FLASH_RISE * 1000 : performance.now();
 	  drawFlash._videoHidden = false;
 	  drawFlash._sceneReady = false;
 	}
