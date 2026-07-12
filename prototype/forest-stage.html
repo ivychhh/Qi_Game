@@ -11,6 +11,7 @@
     --mono: "SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;
     /* forest palette «青雾» — canonical from design/style-constitution.md §2 */
     --color-glow: #C8F0E4;
+    --color-fly: #D8FFEF;
   }
   *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   html,body{ background:#000; overflow:hidden; width:100%; height:100%; }
@@ -99,6 +100,59 @@
   }
   #pill.on{ opacity:1; pointer-events:auto; }
   #pill:focus-visible{ outline:2px solid #E8F1EC; outline-offset:2px; }
+
+  /* record overlay — dream capture (T-006) */
+  #record-ui{
+    position:fixed; inset:0; z-index:24; pointer-events:none; opacity:0;
+    transition:opacity .6s ease;
+  }
+  #record-ui.on{ opacity:1; pointer-events:auto; }
+  #record-fallback{
+    position:fixed; left:0; right:0; top:calc(18% + env(safe-area-inset-top)); text-align:center;
+    font-family:var(--serif); font-size:.82rem; letter-spacing:.22em; color:rgba(216,255,239,.55);
+    opacity:0; transition:opacity 1.4s ease; pointer-events:none;
+  }
+  #record-fallback.on{ opacity:1; }
+  #record-text{
+    position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(118px + env(safe-area-inset-bottom)); width:min(72vw,280px);
+    background:rgba(10,18,16,.55); border:none; border-bottom:1px solid rgba(216,255,239,.22);
+    color:rgba(232,255,246,.88); font-family:var(--serif); font-size:.9rem; letter-spacing:.12em;
+    padding:8px 4px 10px; text-align:center; outline:none; pointer-events:auto;
+    opacity:0; transition:opacity .5s ease;
+  }
+  #record-text.on{ opacity:1; }
+  #record-text::placeholder{ color:rgba(216,255,239,.32); }
+  #record-stamps{
+    position:fixed; left:0; right:0; bottom:calc(52px + env(safe-area-inset-bottom));
+    display:flex; justify-content:center; gap:clamp(6px,2vw,12px); flex-wrap:wrap;
+    padding:0 12px; pointer-events:auto; opacity:0; transition:opacity .5s ease;
+  }
+  #record-stamps.on{ opacity:1; }
+  .record-stamp{
+    width:clamp(42px,11vw,52px); height:clamp(42px,11vw,52px); border-radius:50%;
+    border:1px solid rgba(200,240,228,.28); background:rgba(16,47,48,.62);
+    color:rgba(232,255,246,.78); font-family:var(--serif); font-size:clamp(.58rem,2.6vw,.68rem);
+    letter-spacing:.06em; cursor:pointer; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    box-shadow:0 0 12px rgba(200,240,228,.08); transition:box-shadow .3s ease, background .3s ease;
+  }
+  .record-stamp.lit{
+    border-color:rgba(216,255,239,.55); background:rgba(44,107,107,.55);
+    box-shadow:0 0 18px rgba(216,255,239,.35);
+  }
+  #record-nodream{
+    position:fixed; left:0; right:0; bottom:calc(18px + env(safe-area-inset-bottom)); text-align:center;
+    font-family:var(--serif); font-size:.72rem; letter-spacing:.2em; color:rgba(232,255,246,.28);
+    background:none; border:none; cursor:pointer; pointer-events:auto; opacity:0; transition:opacity .5s ease;
+  }
+  #record-nodream.on{ opacity:1; }
+  #record-nodream-msg{
+    position:fixed; left:0; right:0; top:42%; text-align:center; pointer-events:none;
+    font-family:var(--serif); font-size:clamp(.85rem,3.6vw,1rem); letter-spacing:.24em;
+    color:rgba(232,255,246,.82); text-shadow:0 1px 16px rgba(0,0,0,.45);
+    opacity:0; transition:opacity 1.6s ease;
+  }
+  #record-nodream-msg.on{ opacity:1; }
 </style>
 </head>
 <body>
@@ -121,6 +175,13 @@
 <div id="gate-hint" aria-hidden="true">轻触，推开今夜的门</div>
 <div id="gate-glow" aria-hidden="true"></div>
 <button id="pill">◧ 全屏</button>
+<div id="record-ui" aria-hidden="true">
+  <div id="record-fallback"></div>
+  <input id="record-text" type="text" placeholder="……" maxlength="120" autocomplete="off" enterkeyhint="done">
+  <div id="record-stamps"></div>
+  <button type="button" id="record-nodream">昨晚没有梦</button>
+  <div id="record-nodream-msg"></div>
+</div>
 
 <script>
 'use strict';
@@ -410,6 +471,360 @@ function onSceneStart(now){
     initPresence(now);
   }
   tStart = now;
+}
+
+/* ---------- RECORD — dream capture (T-006) ---------- */
+const RECORD_DEMO = new URLSearchParams(location.search).get('record') === 'demo';
+const RECORD_BOTTLE_BOTTOM = 0.90;
+const RECORD_BOTTLE_MID = 0.56;
+const RECORD_BOTTLE_W = 0.11;
+const RECORD_DIM = 0.35;
+const RECORD_FOG_BOOST = 0.22;
+const RECORD_BREATH_PERIOD = 5.2;
+const RECORD_STRAND_COUNT = 12;
+const RECORD_STAMPS = ['坠落','追赶','迷路','飞','旧地方','说不清'];
+const RECORD_MIC_FALLBACK = '雾里也可以用写的';
+const RECORD_NODREAM_MSG = '雾把昨晚收走了，也好。';
+const RECORD_NODREAM_SHAKE = 0.6;
+const RECORD_EXIT_MS = 800;
+const RECORD_LIGHT_MAX = 24;
+const RECORD_LERP = 0.06;
+
+const record = {
+  active: false, sub: 'idle', lights: 0, stamps: new Set(),
+  lift: 0, dim: 0, fogBoost: 0, strandLevel: 0, strands: [],
+  shakeT: 0, nodreamDone: false, nodreamMsgAlpha: 0,
+  micDenied: false, micReady: false, micFallbackShown: false,
+  holdPointer: null, holdT0: 0,
+  mediaStream: null, mediaRecorder: null, audioChunks: [],
+  analyser: null, audioCtx: null, uiShown: false,
+};
+
+function recordBottlePos(){
+  const S = Math.min(W,H);
+  const bw = S * RECORD_BOTTLE_W;
+  const x = W * 0.5;
+  const y = lerp(H * RECORD_BOTTLE_BOTTOM, H * RECORD_BOTTLE_MID, record.lift);
+  return { x, y, bw, bh: bw * 1.35, rx: bw * 0.42, ry: bw * 0.48 };
+}
+function inBottleHit(x,y){
+  const b = recordBottlePos();
+  const dx = (x - b.x) / b.rx, dy = (y - b.y) / b.ry;
+  return dx*dx + dy*dy <= 1.15;
+}
+function setRecordSub(next){
+  if(record.sub === 'nodream' && next !== 'nodream') return;
+  if(next === 'idle' && record.stamps.size) record.sub = 'stamped';
+  else record.sub = next;
+}
+function addRecordLight(){
+  if(record.lights >= RECORD_LIGHT_MAX) return;
+  record.lights++;
+}
+function showRecordUI(on){
+  const ui = document.getElementById('record-ui');
+  const txt = document.getElementById('record-text');
+  const stamps = document.getElementById('record-stamps');
+  const nd = document.getElementById('record-nodream');
+  if(on){
+    ui.classList.add('on'); ui.setAttribute('aria-hidden','false');
+    txt.classList.add('on'); stamps.classList.add('on'); nd.classList.add('on');
+    record.uiShown = true;
+  } else {
+    ui.classList.remove('on'); ui.setAttribute('aria-hidden','true');
+    txt.classList.remove('on'); stamps.classList.remove('on'); nd.classList.remove('on');
+    txt.blur();
+    record.uiShown = false;
+  }
+}
+function buildRecordStamps(){
+  const wrap = document.getElementById('record-stamps');
+  wrap.innerHTML = '';
+  for(const label of RECORD_STAMPS){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'record-stamp';
+    btn.textContent = label;
+    btn.dataset.stamp = label;
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      onStampTap(label, btn);
+    });
+    wrap.appendChild(btn);
+  }
+}
+function onStampTap(label, btn){
+  if(!record.active || record.sub === 'nodream') return;
+  resetPresenceIdle(performance.now());
+  if(record.stamps.has(label)){
+    record.stamps.delete(label);
+    btn.classList.remove('lit');
+  } else {
+    record.stamps.add(label);
+    btn.classList.add('lit');
+    addRecordLight();
+  }
+  setRecordSub(record.stamps.size ? 'stamped' : 'idle');
+}
+async function initMic(){
+  if(RECORD_DEMO){ record.micReady = true; return true; }
+  if(record.micDenied || record.micReady) return !record.micDenied;
+  if(!navigator.mediaDevices?.getUserMedia){
+    record.micDenied = true;
+    return false;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    record.mediaStream = stream;
+    record.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = record.audioCtx.createMediaStreamSource(stream);
+    record.analyser = record.audioCtx.createAnalyser();
+    record.analyser.fftSize = 256;
+    src.connect(record.analyser);
+    record.mediaRecorder = new MediaRecorder(stream);
+    record.mediaRecorder.ondataavailable = e=>{
+      if(e.data?.size) record.audioChunks.push(e.data);
+    };
+    record.micReady = true;
+    return true;
+  } catch(_){
+    record.micDenied = true;
+    return false;
+  }
+}
+function showMicFallback(){
+  if(record.micFallbackShown) return;
+  record.micFallbackShown = true;
+  const el = document.getElementById('record-fallback');
+  el.textContent = RECORD_MIC_FALLBACK;
+  el.classList.add('on');
+}
+function getRecordVolume(t){
+  if(RECORD_DEMO && record.sub === 'holding'){
+    return clamp(0.22 + 0.55*Math.abs(Math.sin(t*7.2 + record.holdT0)), 0, 1);
+  }
+  if(!record.analyser) return 0;
+  const buf = new Uint8Array(record.analyser.frequencyBinCount);
+  record.analyser.getByteFrequencyData(buf);
+  let sum = 0;
+  for(let i=0;i<buf.length;i++) sum += buf[i];
+  return clamp(sum / buf.length / 180, 0, 1);
+}
+function startRecordHold(){
+  if(!record.active || record.sub === 'nodream') return;
+  record.sub = 'holding';
+  record.holdT0 = (performance.now()-tStart)/1000;
+  record.strands = [];
+  for(let i=0;i<RECORD_STRAND_COUNT;i++){
+    record.strands.push({
+      ph: Math.random()*7, off: (Math.random()-.5)*0.18, len: 0.4+Math.random()*0.5
+    });
+  }
+  initMic().then(ok=>{
+    if(!ok){ showMicFallback(); return; }
+    record.audioChunks = [];
+    if(record.mediaRecorder?.state === 'inactive'){
+      try { record.mediaRecorder.start(200); } catch(_){ /* noop */ }
+    }
+    if(record.audioCtx?.state === 'suspended') record.audioCtx.resume();
+  });
+}
+function endRecordHold(){
+  if(record.sub !== 'holding') return;
+  if(record.mediaRecorder?.state === 'recording'){
+    try { record.mediaRecorder.stop(); } catch(_){ /* noop */ }
+  }
+  record.audioChunks = [];
+  addRecordLight();
+  setRecordSub(record.stamps.size ? 'stamped' : 'idle');
+  record.strandLevel = 0;
+}
+function enterRecord(){
+  if(record.active || mode !== 'scene') return;
+  resetPresenceIdle(performance.now());
+  record.active = true;
+  record.sub = 'idle';
+  record.nodreamDone = false;
+  record.nodreamMsgAlpha = 0;
+  document.getElementById('record-nodream-msg').classList.remove('on');
+  document.getElementById('record-nodream-msg').textContent = '';
+  showRecordUI(true);
+}
+function finishRecord(t){
+  if(!record.active) return;
+  record.active = false;
+  record.sub = 'idle';
+  showRecordUI(false);
+  document.getElementById('record-fallback').classList.remove('on');
+  const L = listener;
+  if(L.rx){ L.blinkT = t; L.nextBlink = t + pScaled(2.6 + Math.random()*4.5); }
+}
+function exitRecord(t){
+  if(record.sub === 'nodream') return;
+  finishRecord(t);
+}
+function onNoDream(t){
+  if(!record.active || record.nodreamDone) return;
+  record.sub = 'nodream';
+  record.nodreamDone = true;
+  record.shakeT = t;
+  const msg = document.getElementById('record-nodream-msg');
+  msg.textContent = RECORD_NODREAM_MSG;
+  msg.classList.add('on');
+  setTimeout(()=> finishRecord(t + RECORD_NODREAM_SHAKE + 1.8), (RECORD_NODREAM_SHAKE + 1.6) * 1000);
+}
+function onRecordTextSubmit(){
+  if(!record.active || record.sub === 'nodream') return;
+  const inp = document.getElementById('record-text');
+  const v = inp.value.trim();
+  if(!v) return;
+  addRecordLight();
+  inp.value = '';
+  setRecordSub(record.stamps.size ? 'stamped' : 'idle');
+  resetPresenceIdle(performance.now());
+}
+function onSceneBottleTap(){
+  if(mode !== 'scene' || record.active) return;
+  enterRecord();
+}
+function onRecordPointerDown(x,y,now){
+  if(record.sub === 'nodream') return;
+  resetPresenceIdle(now);
+  if(inBottleHit(x,y)){
+    record.holdPointer = true;
+    startRecordHold();
+    return;
+  }
+  const t = (now - tStart)/1000;
+  exitRecord(t);
+}
+function onRecordPointerUp(){
+  if(record.holdPointer){
+    record.holdPointer = false;
+    endRecordHold();
+  }
+}
+function updateRecord(t){
+  const targetLift = record.active ? 1 : 0;
+  const targetDim = record.active ? RECORD_DIM : 0;
+  const targetFog = record.active ? RECORD_FOG_BOOST : 0;
+  record.lift = lerp(record.lift, targetLift, RECORD_LERP);
+  record.dim = lerp(record.dim, targetDim, RECORD_LERP);
+  record.fogBoost = lerp(record.fogBoost, targetFog, RECORD_LERP);
+  if(record.sub === 'holding'){
+    record.strandLevel = lerp(record.strandLevel, getRecordVolume(t), 0.22);
+  } else {
+    record.strandLevel = lerp(record.strandLevel, 0, 0.12);
+  }
+}
+function drawBottle(ctx,t){
+  if(mode !== 'scene' || !uiRevealed) return;
+  const b = recordBottlePos();
+  const p = pal();
+  const breath = reduceMotion ? 0.72 : 0.62 + 0.28*(0.5+0.5*Math.sin(t*Math.PI*2/RECORD_BREATH_PERIOD));
+  let shakeX = 0;
+  if(record.shakeT > 0){
+    const st = t - record.shakeT;
+    if(st < RECORD_NODREAM_SHAKE) shakeX = Math.sin(st*28)*b.bw*0.04*(1-st/RECORD_NODREAM_SHAKE);
+  }
+  const cx = b.x + shakeX, cy = b.y;
+  const neckW = b.bw*0.28, bodyW = b.bw*0.72, bodyH = b.bh*0.62, neckH = b.bh*0.28;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const glowR = b.bw * (1.8 + breath*0.4);
+  ctx.globalAlpha = 0.35 * breath;
+  const gg = ctx.createRadialGradient(cx, cy-b.bh*0.05, 0, cx, cy-b.bh*0.05, glowR);
+  gg.addColorStop(0, rgba(p.fly, .75));
+  gg.addColorStop(1, rgba(p.fly, 0));
+  ctx.fillStyle = gg;
+  ctx.fillRect(cx-glowR, cy-glowR, glowR*2, glowR*2);
+  ctx.restore();
+
+  ctx.save();
+  const glass = mixHex(p.layers[3], p.fly, 0.18);
+  const rim = rgba(p.glow, .42);
+  ctx.fillStyle = glass;
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 1.2;
+  const topY = cy - bodyH/2 - neckH;
+  ctx.beginPath();
+  ctx.moveTo(cx-neckW/2, topY+neckH);
+  ctx.lineTo(cx-neckW/2, topY);
+  ctx.quadraticCurveTo(cx, topY-neckH*0.12, cx+neckW/2, topY);
+  ctx.lineTo(cx+neckW/2, topY+neckH);
+  ctx.lineTo(cx+bodyW/2, topY+neckH);
+  ctx.quadraticCurveTo(cx+bodyW/2, topY+neckH+bodyH, cx, topY+neckH+bodyH);
+  ctx.quadraticCurveTo(cx-bodyW/2, topY+neckH+bodyH, cx-bodyW/2, topY+neckH);
+  ctx.closePath();
+  ctx.fill();
+  if(CONFIG.strokeWidth>0) ctx.stroke();
+
+  if(record.lights > 0){
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const n = Math.min(record.lights, 12);
+    for(let i=0;i<n;i++){
+      const a = (i/n)*Math.PI*2 + t*0.4;
+      const r = bodyW*0.22*(0.5+0.5*Math.sin(i*2.1+t));
+      const lx = cx + Math.cos(a)*r*0.55;
+      const ly = topY + neckH + bodyH*0.45 + Math.sin(a)*r*0.35;
+      const tw = 0.55 + 0.45*Math.sin(t*2.2+i);
+      ctx.globalAlpha = tw;
+      const sz = b.bw*0.07;
+      ctx.drawImage(flySprite, lx-sz, ly-sz, sz*2, sz*2);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function drawRecordStrands(ctx,t){
+  if(record.sub !== 'holding' || record.strandLevel < 0.02) return;
+  const b = recordBottlePos();
+  const p = pal();
+  const topY = b.y - b.bh*0.5;
+  const lvl = record.strandLevel;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for(const s of record.strands){
+    const alpha = lvl * (0.35 + 0.25*Math.sin(t*3.5+s.ph));
+    if(reduceMotion){
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.fillStyle = rgba(p.fly, alpha);
+      ctx.beginPath();
+      ctx.arc(b.x + s.off*b.bw, topY - b.bh*0.08, b.bw*0.04*(0.6+lvl), 0, 7);
+      ctx.fill();
+    } else {
+      const x0 = b.x + s.off*b.bw*2.2;
+      const y0 = topY - b.bh*(0.35 + s.len*0.25);
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = rgba(p.fly, alpha);
+      ctx.lineWidth = 1.2 + lvl*2.2;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      const mx = lerp(x0, b.x, 0.55);
+      const my = lerp(y0, topY, 0.5 + 0.12*Math.sin(t*5+s.ph));
+      ctx.quadraticCurveTo(mx, my, b.x, topY);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function bindRecordDOM(){
+  buildRecordStamps();
+  const txt = document.getElementById('record-text');
+  txt.addEventListener('focus', ()=>{ if(record.active) record.sub = 'typing'; });
+  txt.addEventListener('blur', ()=>{
+    if(record.active && record.sub === 'typing') setRecordSub(record.stamps.size ? 'stamped' : 'idle');
+  });
+  txt.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); onRecordTextSubmit(); }
+  });
+  document.getElementById('record-nodream').addEventListener('click', e=>{
+    e.stopPropagation();
+    onNoDream((performance.now()-tStart)/1000);
+  });
+  document.getElementById('record-ui').addEventListener('click', e=> e.stopPropagation());
 }
 
 /* ============================================================
@@ -786,8 +1201,8 @@ function shafts(ctx,t){
   }
   ctx.restore();
 }
-function drawFogBand(ctx,band,t,breath){
-  const base=(CONFIG.fog/100)*1.15;
+function drawFogBand(ctx,band,t,breath,mul=1){
+  const base=(CONFIG.fog/100)*1.15*mul;
   if(base<=0.01) return;
   const spdMult = CONFIG.fogSpeed;
   const motMult = reduceMotion ? 0 : 1;
@@ -1141,6 +1556,7 @@ function drawFlash(now){
 function drawScene(now){
   const t=(now-tStart)/1000;
   if(presence.started) updatePresence(t, now);
+  if(mode==='scene') updateRecord(t);
   const period = CONFIG.breathPeriod;
   const amp = CONFIG.breathAmp/100;
   const breath=reduceMotion?0:Math.sin(t*Math.PI*2/period)*amp;
@@ -1149,13 +1565,15 @@ function drawScene(now){
   const px=(pointer.x/W-.5)*2*pi, py=(pointer.y/H-.5)*2*pi;
   const sway=reduceMotion?0:Math.sin(t*.07)*3*pi;
   const nLayers = CONFIG.parallaxLayers;
+  const glowK = (1+.06*breath) * (1 - record.dim*0.45);
 
-  skyPaint(cx2,1+.06*breath);
+  skyPaint(cx2, glowK);
   if(!reduceMotion) shafts(cx2,t);
-  if(CONFIG.fogLayers>=1) drawFogBand(cx2,0,t,breath);
+  const fogMul = 1 + record.fogBoost;
+  if(CONFIG.fogLayers>=1) drawFogBand(cx2,0,t,breath,fogMul);
 
   for(let k=0;k<nLayers;k++){
-    if(k===3 && CONFIG.fogLayers>=2) drawFogBand(cx2,1,t,breath);
+    if(k===3 && CONFIG.fogLayers>=2) drawFogBand(cx2,1,t,breath,fogMul);
     cx2.save();
     const s=1+BAMP_ALL[k]*breath;
     cx2.translate(W/2,H*.62); cx2.scale(s,s); cx2.translate(-W/2,-H*.62);
@@ -1164,10 +1582,26 @@ function drawScene(now){
     if(k===Math.min(4,nLayers-1) && listener.rx){ drawEyes(cx2,t); }
     cx2.restore();
   }
-  if(CONFIG.fogLayers>=3) drawFogBand(cx2,2,t,breath);
-  if(CONFIG.fogLayers>=4) drawFogBand(cx2,3,t,breath);
+  if(CONFIG.fogLayers>=3) drawFogBand(cx2,2,t,breath,fogMul);
+  if(CONFIG.fogLayers>=4) drawFogBand(cx2,3,t,breath,fogMul);
+  if(record.fogBoost > 0.02){
+    cx2.save();
+    cx2.globalAlpha = record.fogBoost * 0.55;
+    for(const b of fogBlobs){
+      const bx=(b.x + t*b.sp*CONFIG.fogSpeed*(reduceMotion?0:1))%1.4;
+      const r=b.r*Math.min(W,H)*1.05;
+      cx2.drawImage(fogSprite,(bx-.1)*W-r, b.y*H-r*.7, r*2, r*1.3);
+    }
+    cx2.restore();
+  }
   drawFlies(cx2,t);
   drawRipples(cx2,t);
+  drawBottle(cx2,t);
+  drawRecordStrands(cx2,t);
+  if(record.dim > 0.01){
+    cx2.fillStyle = rgba(pal().sky[0], record.dim * 0.5);
+    cx2.fillRect(0,0,W,H);
+  }
   cx2.drawImage(vignette,0,0,W,H);
   cx2.globalAlpha=.05;
   cx2.drawImage(grain, reduceMotion?0:((t*7)%128)-128, reduceMotion?0:((t*3)%128)-128, W+256, H+256);
@@ -1189,6 +1623,8 @@ function revealUI(){
 /* ---------- interaction ---------- */
 function interact(x,y,now){
   if(mode!=='scene') return;
+  if(record.active) return;
+  if(inBottleHit(x,y)){ onSceneBottleTap(); return; }
   resetPresenceIdle(now);
   const L=listener;
   const nearListener = L.rx && Math.hypot((x-L.x)/(L.rx*2.1),(y-L.y)/(L.ry*2.1))<1;
@@ -1219,8 +1655,11 @@ cv.addEventListener('pointerdown',e=>{
   const x=e.clientX-rect.left, y=e.clientY-rect.top;
   pointer.tx=x; pointer.ty=y;
   if(mode==='gate'){ onGateTap(x,y); return; }
+  if(mode==='scene' && record.active){ onRecordPointerDown(x,y,performance.now()); return; }
   interact(x,y,performance.now());
 });
+cv.addEventListener('pointerup', ()=> onRecordPointerUp());
+cv.addEventListener('pointercancel', ()=> onRecordPointerUp());
 
 /* ---------- fullscreen toggle ---------- */
 const pill = document.getElementById('pill');
@@ -1441,10 +1880,20 @@ window.__listener = listener;
 window.__triggerAttention = triggerAttention;
 window.__getMode = ()=>mode;
 window.__getSceneT = ()=>(performance.now()-tStart)/1000;
+window.__record = record;
+window.__enterRecord = enterRecord;
+window.__exitRecord = ()=>exitRecord((performance.now()-tStart)/1000);
+window.__recordHoldStart = startRecordHold;
+window.__recordHoldEnd = endRecordHold;
+window.__addRecordLight = addRecordLight;
+window.__onNoDream = ()=>onNoDream((performance.now()-tStart)/1000);
+window.__inBottleHit = inBottleHit;
+window.__getRecordBottle = recordBottlePos;
 
 if(new URLSearchParams(location.search).get('selftest')==='1'){
   sessionStorage.removeItem('qi-presence-welcome');
 }
+bindRecordDOM();
 </script>
 </body>
 </html>
