@@ -438,23 +438,147 @@ let frameTimes = [];
 /* ============================================================
    shape helpers
    ============================================================ */
+/* ============================================================
+   Organic tree shape functions
+   ============================================================ */
+
 function trunk(ctx,x,topY,botY,w,lean){
+  // Organic trunk with root flare + natural taper
   const midX=x+lean*(botY-topY)*.5;
+  const h=botY-topY;
+  const flare=w*.5; // root flare width addition
   ctx.beginPath();
-  ctx.moveTo(x-w/2,botY);
-  ctx.bezierCurveTo(midX-w*.42,(topY+botY)/2, x+lean*(botY-topY)-w*.3,topY, x+lean*(botY-topY),topY);
-  ctx.lineTo(x+lean*(botY-topY)+w*.62,topY);
-  ctx.bezierCurveTo(midX+w*.48,(topY+botY)/2, x+w/2,botY, x+w/2,botY);
+  ctx.moveTo(x-w/2-flare,botY);
+  // Left: root → mid → top
+  ctx.bezierCurveTo(midX-w*.45,botY-h*.15, midX-w*.38,botY-h*.55, x+lean*h-w*.18,topY);
+  // Narrow top
+  ctx.lineTo(x+lean*h+w*.18,topY);
+  // Right: top → mid → root
+  ctx.bezierCurveTo(midX+w*.38,botY-h*.55, midX+w*.45,botY-h*.15, x+w/2+flare,botY);
   ctx.closePath(); ctx.fill();
   if(CONFIG.strokeWidth>0){ ctx.stroke(); }
 }
-function pine(ctx,x,baseY,h,w){
-  for(let i=0;i<4;i++){
-    const ty=baseY-h*(.34+.22*i), by=baseY-h*.22*i, ww=w*(1-.19*i);
-    ctx.beginPath(); ctx.moveTo(x,ty); ctx.lineTo(x-ww/2,by); ctx.lineTo(x+ww/2,by); ctx.closePath(); ctx.fill();
+
+function drawCanopyBlob(ctx,cx,cy,rw,rh,rand){
+  // Organic crown: 5-8 overlapping offset ellipses
+  const n=5+Math.floor(rand()*4);
+  for(let i=0;i<n;i++){
+    const ox=(rand()-.5)*rw*1.2;
+    const oy=(rand()-.5)*rh*1.4;
+    const er=rw*(.35+rand()*.45);
+    const er2=rh*(.4+rand()*.5);
+    ctx.beginPath();
+    ctx.ellipse(cx+ox,cy+oy,er,er2,(rand()-.5)*.6,0,Math.PI*2);
+    ctx.fill();
     if(CONFIG.strokeWidth>0) ctx.stroke();
   }
-  ctx.fillRect(x-w*.05,baseY-h*.24,w*.1,h*.26);
+}
+
+function drawFractalTree(ctx,x,baseY,h,w,lean,rand,depth,maxDepth){
+  // Recursive fractal tree: trunk segment → branches → canopy
+  if(depth>=maxDepth||h<3) return;
+  const topX=x+lean*h;
+  const topY=baseY-h;
+  const midY=baseY-h*.4;
+  const wTop=w*(.15+.1*depth/maxDepth); // taper as we go up
+
+  // Draw trunk segment with organic bezier wiggle
+  const wg1=(rand()-.5)*w*.8; const wg2=(rand()-.5)*w*.7;
+  ctx.beginPath();
+  ctx.moveTo(x-w/2,baseY);
+  ctx.bezierCurveTo(x-w*.35+wg1,midY, topX-wTop*.6+wg2,topY+h*.25, topX-wTop,topY);
+  ctx.lineTo(topX+wTop,topY);
+  ctx.bezierCurveTo(topX+wTop*.6+wg2,topY+h*.25, x+w*.35+wg1,midY, x+w/2,baseY);
+  ctx.closePath(); ctx.fill();
+  if(CONFIG.strokeWidth>0) ctx.stroke();
+
+  // Branches: 2-3 at this level if not terminal
+  if(depth<maxDepth-1){
+    const nBranches=2+(rand()>.55?1:0);
+    for(let i=0;i<nBranches;i++){
+      const frac=.35+rand()*.40; // branch point along trunk (0=base, 1=top)
+      const bY=baseY-h*frac;
+      const bX=lerp(x,topX,frac);
+      const bH=h*(.35+rand()*.28); // branch height
+      const t=frac; // local x position
+      const segW=lerp(w,wTop,t); // interpolated width at branch point
+      const bW=segW*.55;
+      const bLean=(rand()-.5)*.9; // strong left/right lean
+      drawFractalTree(ctx,bX,bY,bH,bW,bLean,rand,depth+1,maxDepth);
+    }
+  }
+
+  // Terminal canopy blob
+  if(depth>=1){
+    const crownRw=h*.28, crownRh=h*.18;
+    drawCanopyBlob(ctx,topX,topY-h*.05,crownRw,crownRh,rand);
+  }
+}
+
+function drawNaturalPine(ctx,x,baseY,h,w,rand){
+  // Organic conifer: irregular bezier tiers + visible trunk
+  const nTiers=5+Math.floor(rand()*4);
+  const trunkW=Math.max(2,w*.08);
+
+  // Central trunk
+  ctx.fillRect(x-trunkW/2,baseY-h*.28,trunkW,h*.28);
+
+  for(let i=0;i<nTiers;i++){
+    const frac=.12+.72*(1-i/nTiers); // position from base (bottom-heavy)
+    const tY=baseY-h*frac;
+    const tW=w*(.25+.75*(1-i/nTiers)); // wider near bottom
+    const tH=h*(.06+.05*rand());
+    const asym=(rand()-.5)*tW*.35;
+    const droop=(rand()-.2)*tH*.6; // slight downward sag
+
+    ctx.beginPath();
+    // Start left of trunk
+    ctx.moveTo(x-trunkW/2,tY);
+    // Left leaf edge — curve out and down
+    ctx.bezierCurveTo(
+      x-tW*.55+asym, tY-tH*.2+droop,
+      x-tW*.5+rand()*tW*.18, tY-tH+droop,
+      x-trunkW*.3, tY-tH*.7+droop
+    );
+    // Across top
+    ctx.bezierCurveTo(
+      x+(rand()-.5)*trunkW, tY-tH*.85+droop,
+      x+trunkW*.3, tY-tH*.7+droop,
+      x+trunkW/2, tY
+    );
+    // Right leaf edge — curve out and down
+    ctx.bezierCurveTo(
+      x+tW*.5-rand()*tW*.18, tY-tH+droop,
+      x+tW*.55-asym, tY-tH*.2+droop,
+      x+trunkW/2, tY
+    );
+    ctx.closePath(); ctx.fill();
+    if(CONFIG.strokeWidth>0) ctx.stroke();
+  }
+}
+
+function drawClumpTree(ctx,x,baseY,h,w,rand){
+  // Multi-trunk cluster from common base
+  const nTrunks=2+Math.floor(rand()*4);
+  for(let i=0;i<nTrunks;i++){
+    const tX=x+(rand()-.5)*w*.4;
+    const tH=h*(.6+rand()*.4);
+    const tW=w*(.12+rand()*.18);
+    const tLean=(rand()-.5)*.35;
+
+    // Thin trunk with slight curve
+    const topX=tX+tLean*tH;
+    ctx.beginPath();
+    ctx.moveTo(tX-tW/2,baseY);
+    ctx.bezierCurveTo(tX-tW*.3,baseY-tH*.35, topX-tW*.7,baseY-tH*.7, topX-tW*.3,baseY-tH);
+    ctx.lineTo(topX+tW*.3,baseY-tH);
+    ctx.bezierCurveTo(topX+tW*.7,baseY-tH*.7, tX+tW*.3,baseY-tH*.35, tX+tW/2,baseY);
+    ctx.closePath(); ctx.fill();
+    if(CONFIG.strokeWidth>0) ctx.stroke();
+
+    // Small canopy at top
+    drawCanopyBlob(ctx,topX,baseY-tH,tH*.22,tH*.14,rand);
+  }
 }
 function fanPalm(ctx,x,y,r,blades,spread,rot){
   for(let i=0;i<blades;i++){
@@ -516,51 +640,103 @@ function hangBranch(ctx,x0,drop,segs,color,accent,rand){
    scene build — geometry (seeded)
    ============================================================ */
 function buildGeometry(){
-  listener.rx = 0; // reset — will be set by renderLayerSprite if a listener trunk exists
+  listener.rx = 0;
   const rand = mulberry32(20260712);
   const portrait = effectiveH > effectiveW;
   const g = { layers:[[],[],[],[],[],[]], rand };
-  const maxLayers = CONFIG.parallaxLayers;
+  const L = CONFIG.parallaxLayers;
+  const seedBase = 71200;
 
-  const n0 = portrait?6:9;
-  for(let i=0;i<n0;i++){
-    if(0<maxLayers) g.layers[0].push({t:'trunk', x:(.04+.92*i/(n0-1)+(rand()-.5)*.05), w:.012+rand()*.01, lean:(rand()-.5)*.14, top:-.05, bot:.62+rand()*.1});
+  // Layer constraints per parallax distance: [minH,maxH, minW,maxW, maxDepth, count]
+  const LCFG = [
+    [0.12,0.28, 0.008,0.018, 2, portrait?16:22],  // L0: far — thin, short, dense wall
+    [0.18,0.40, 0.012,0.028, 3, portrait?11:16],  // L1: mid-far — taller
+    [0.25,0.55, 0.016,0.038, 4, portrait?7:11],   // L2: mid — detail visible
+    [0.30,0.65, 0.020,0.048, 4, portrait?5:8],    // L3: mid-near
+    [0.35,0.80, 0.024,0.060, 5, portrait?4:6],    // L4: near
+    [0.45,0.95, 0.028,0.075, 5, portrait?3:4],    // L5: nearest
+  ];
+
+  function randTree(layer, n){
+    const cfg=LCFG[layer];
+    for(let i=0;i<n;i++){
+      const x=.02+.96*((i+.5)/n+(rand()-.5)*.08);
+      const h=cfg[0]+rand()*(cfg[1]-cfg[0]);
+      const w=cfg[2]+rand()*(cfg[3]-cfg[2]);
+      const lean=(rand()-.5)*(layer<3?.12:.18);
+      const baseY=.58+rand()*.42; // ground-level variance
+      const maxD=cfg[4];
+      const seed=seedBase+layer*1000+i;
+      g.layers[layer].push({t:'ftree', x, baseY, h, w, lean, seed, maxDepth:maxD});
+    }
   }
-  if(0<maxLayers){ g.layers[0].push({t:'pine', x:.3+rand()*.08, base:.66, h:.3, w:.13}); }
-  if(0<maxLayers){ g.layers[0].push({t:'pine', x:.62+rand()*.06, base:.64, h:.36, w:.15}); }
+  function randPine(layer, n){
+    for(let i=0;i<n;i++){
+      const x=.04+.92*((i+.5)/n+(rand()-.5)*.07);
+      const h=LCFG[layer][0]*1.2+rand()*(LCFG[layer][1]*1.1-LCFG[layer][0]*1.2);
+      const w=LCFG[layer][2]*1.5+rand()*(LCFG[layer][3]*1.4-LCFG[layer][2]*1.5);
+      const baseY=.60+rand()*.35;
+      g.layers[layer].push({t:'npine', x, baseY, h, w, seed:seedBase+layer*1000+500+n+i});
+    }
+  }
 
-  if(1<maxLayers) g.layers[1].push({t:'path'});
-  if(1<maxLayers) g.layers[1].push({t:'trunk', x:.12, w:.03, lean:.1, top:.02, bot:.78});
-  if(1<maxLayers) g.layers[1].push({t:'trunk', x:.88, w:.026, lean:-.12, top:-.02, bot:.75});
-  if(1<maxLayers) g.layers[1].push({t:'palm', x:.06, y:.66, r:.3, blades:7, spread:2.0, rot:-.5});
-  if(1<maxLayers) g.layers[1].push({t:'palm', x:.97, y:.6, r:.27, blades:6, spread:1.8, rot:Math.PI+.4});
-  if(1<maxLayers) for(let i=0;i<7;i++) g.layers[1].push({t:'bush', x:.05+.9*i/6+(rand()-.5)*.04, y:.8+rand()*.03, r:.05+rand()*.03});
+  // Layer 0 — far forest wall (all fractal)
+  if(L>0) randTree(0,LCFG[0][5]);
 
-  if(2<maxLayers) g.layers[2].push({t:'leaf', x:-.02, y:.74, len:.34, wr:.42, rot:-.5});
-  if(2<maxLayers) g.layers[2].push({t:'leaf', x:-.04, y:.9, len:.4, wr:.4, rot:-.18});
-  if(2<maxLayers) g.layers[2].push({t:'leaf', x:1.02, y:.78, len:.36, wr:.42, rot:Math.PI+.42});
-  if(2<maxLayers) g.layers[2].push({t:'leaf', x:1.05, y:.94, len:.44, wr:.38, rot:Math.PI+.12});
-  if(2<maxLayers) g.layers[2].push({t:'palm', x:.5, y:1.04, r:.24, blades:8, spread:2.6, rot:-Math.PI/2-1.3});
-  if(2<maxLayers) for(let i=0;i<5;i++) g.layers[2].push({t:'bush', x:.08+.84*i/4+(rand()-.5)*.05, y:.92+rand()*.04, r:.07+rand()*.04});
-  if(2<maxLayers) g.layers[2].push({t:'branch', x:.22, drop:.3});
+  // Layer 1 — mid-far: mix fractal + pine + palms + bushes + path
+  if(L>1){
+    g.layers[1].push({t:'path'});
+    randTree(1,LCFG[1][5]-3);
+    randPine(1, portrait?3:5);
+    g.layers[1].push({t:'palm', x:.06+rand()*.04, y:.58+rand()*.12, r:.25+rand()*.08, blades:6+Math.floor(rand()*3), spread:1.8+rand()*.4, rot:-.4+rand()*.2});
+    g.layers[1].push({t:'palm', x:.92+rand()*.05, y:.54+rand()*.12, r:.22+rand()*.08, blades:5+Math.floor(rand()*3), spread:1.6+rand()*.5, rot:Math.PI+.3+rand()*.2});
+    for(let i=0;i<(portrait?5:8);i++) g.layers[1].push({t:'bush', x:.05+.9*i/(portrait?4:7)+(rand()-.5)*.05, y:.78+rand()*.05, r:.04+rand()*.04});
+  }
 
-  if(3<maxLayers) g.layers[3].push({t:'leaf', x:-.03, y:1.02, len:.52, wr:.4, rot:-.62});
-  if(3<maxLayers) g.layers[3].push({t:'leaf', x:.1, y:1.06, len:.42, wr:.44, rot:-1.0});
-  if(3<maxLayers) g.layers[3].push({t:'leaf', x:1.04, y:1.04, len:.54, wr:.4, rot:Math.PI+.6});
-  if(3<maxLayers) g.layers[3].push({t:'palm', x:-.04, y:.2, r:.3, blades:6, spread:1.5, rot:.5});
-  if(3<maxLayers) g.layers[3].push({t:'branch', x:.72, drop:.36});
+  // Layer 2 — mid: mix fractal + pine + clump + leaf frame + branch
+  if(L>2){
+    randTree(2,LCFG[2][5]-2);
+    randPine(2, portrait?2:4);
+    if(rand()>.35) g.layers[2].push({t:'ctree', x:.15+rand()*.7, baseY:.62+rand()*.3, h:.30+rand()*.25, w:.025+rand()*.035, seed:seedBase+2999});
+    g.layers[2].push({t:'leaf', x:-.02+rand()*.02, y:.70+rand()*.08, len:.30+rand()*.1, wr:.38+rand()*.08, rot:-.4+rand()*.3});
+    g.layers[2].push({t:'leaf', x:1.01+rand()*.03, y:.72+rand()*.12, len:.32+rand()*.1, wr:.38+rand()*.08, rot:Math.PI+.3+rand()*.3});
+    g.layers[2].push({t:'palm', x:.46+rand()*.08, y:1.0+rand()*.06, r:.20+rand()*.08, blades:7+Math.floor(rand()*2), spread:2.2+rand()*.6, rot:-Math.PI/2-1.1+rand()*.4});
+    for(let i=0;i<(portrait?4:6);i++) g.layers[2].push({t:'bush', x:.06+.88*i/(portrait?3:5)+(rand()-.5)*.06, y:.88+rand()*.06, r:.06+rand()*.05});
+    g.layers[2].push({t:'branch', x:.18+rand()*.1, drop:.25+rand()*.12});
+  }
 
-  const lx = portrait ? .84 : .8;
-  if(4<maxLayers) g.layers[4].push({t:'trunk', x:lx, w:.2, lean:.02, top:-.06, bot:1.06, listener:true});
-  if(4<maxLayers) g.layers[4].push({t:'leaf', x:lx-.13, y:.16, len:.26, wr:.5, rot:2.4});
-  if(4<maxLayers) g.layers[4].push({t:'leaf', x:lx+.1, y:.78, len:.3, wr:.46, rot:Math.PI-.5});
-  if(4<maxLayers) g.layers[4].push({t:'leaf', x:-.02, y:-.02, len:.4, wr:.42, rot:.9});
-  if(4<maxLayers) g.layers[4].push({t:'leaf', x:.16, y:-.05, len:.3, wr:.5, rot:1.25});
+  // Layer 3 — mid-near: fractal + palm + leaf frame + branch
+  if(L>3){
+    randTree(3,LCFG[3][5]);
+    g.layers[3].push({t:'leaf', x:-.03+rand()*.03, y:.96+rand()*.1, len:.48+rand()*.1, wr:.36+rand()*.08, rot:-.55+rand()*.25});
+    g.layers[3].push({t:'leaf', x:.06+rand()*.08, y:1.0+rand()*.1, len:.38+rand()*.1, wr:.40+rand()*.08, rot:-.9+rand()*.3});
+    g.layers[3].push({t:'leaf', x:1.02+rand()*.03, y:.98+rand()*.12, len:.50+rand()*.1, wr:.36+rand()*.08, rot:Math.PI+.5+rand()*.3});
+    g.layers[3].push({t:'palm', x:-.04+rand()*.04, y:.16+rand()*.1, r:.26+rand()*.1, blades:5+Math.floor(rand()*3), spread:1.3+rand()*.5, rot:.4+rand()*.3});
+    g.layers[3].push({t:'branch', x:.68+rand()*.1, drop:.30+rand()*.15});
+  }
 
-  // Layer 5 — extra foreground for 6-layer mode
-  if(5<maxLayers) g.layers[5].push({t:'leaf', x:-.01, y:1.04, len:.6, wr:.38, rot:-.82});
-  if(5<maxLayers) g.layers[5].push({t:'leaf', x:1.02, y:1.08, len:.58, wr:.36, rot:Math.PI+.7});
-  if(5<maxLayers) g.layers[5].push({t:'palm', x:.02, y:.1, r:.35, blades:7, spread:1.6, rot:.7});
+  // Layer 4 — near: listener trunk + large fractal trees + leaf frame
+  if(L>4){
+    const lx = portrait ? .84 : .8;
+    g.layers[4].push({t:'trunk', x:lx, w:.18+rand()*.04, lean:.02+(rand()-.5)*.04, top:-.06, bot:1.06, listener:true});
+    randTree(4,LCFG[4][5]-1);
+    // One big foreground fractal tree on the opposite side from listener
+    const farX = portrait ? .12 : .15;
+    g.layers[4].push({t:'ftree', x:farX+rand()*.06, baseY:.60+rand()*.3, h:.50+rand()*.30, w:.040+rand()*.030, lean:.06+(rand()-.5)*.1, seed:seedBase+4999, maxDepth:5});
+    g.layers[4].push({t:'leaf', x:lx-.13+rand()*.04, y:.12+rand()*.1, len:.22+rand()*.1, wr:.44+rand()*.1, rot:2.2+rand()*.5});
+    g.layers[4].push({t:'leaf', x:lx+.08+rand()*.05, y:.72+rand()*.12, len:.26+rand()*.1, wr:.42+rand()*.08, rot:Math.PI-.4+rand()*.3});
+    g.layers[4].push({t:'leaf', x:-.02+rand()*.03, y:-.04+rand()*.04, len:.36+rand()*.1, wr:.38+rand()*.08, rot:.8+rand()*.4});
+    g.layers[4].push({t:'leaf', x:.12+rand()*.08, y:-.06+rand()*.03, len:.26+rand()*.1, wr:.44+rand()*.1, rot:1.1+rand()*.3});
+  }
+
+  // Layer 5 — nearest: giant foreground silhouettes
+  if(L>5){
+    g.layers[5].push({t:'ctree', x:.06+rand()*.12, baseY:.65+rand()*.25, h:.55+rand()*.35, w:.045+rand()*.030, seed:seedBase+5999});
+    g.layers[5].push({t:'ftree', x:.88+rand()*.08, baseY:.60+rand()*.30, h:.60+rand()*.30, w:.050+rand()*.025, lean:-.04+(rand()-.5)*.1, seed:seedBase+6999, maxDepth:5});
+    g.layers[5].push({t:'leaf', x:-.01+rand()*.03, y:1.0+rand()*.08, len:.56+rand()*.12, wr:.34+rand()*.08, rot:-.75+rand()*.2});
+    g.layers[5].push({t:'leaf', x:1.01+rand()*.03, y:1.02+rand()*.1, len:.54+rand()*.12, wr:.32+rand()*.08, rot:Math.PI+.6+rand()*.3});
+    g.layers[5].push({t:'palm', x:.01+rand()*.04, y:.08+rand()*.08, r:.30+rand()*.12, blades:6+Math.floor(rand()*2), spread:1.4+rand()*.5, rot:.6+rand()*.3});
+  }
 
   return g;
 }
@@ -595,7 +771,9 @@ function renderLayerSprite(k){
         ctx.beginPath(); ctx.ellipse(hx,hy,rx*1.06,ry*1.06,0,0,7); ctx.stroke();
       }
     }
-    else if(e.t==='pine') pine(ctx, e.x*W, e.base*H, e.h*H, e.w*W);
+    else if(e.t==='ftree') drawFractalTree(ctx, e.x*W, e.baseY*H, e.h*H, e.w*W, e.lean, mulberry32(e.seed), 0, e.maxDepth||4);
+    else if(e.t==='npine') drawNaturalPine(ctx, e.x*W, e.baseY*H, e.h*H, e.w*W, mulberry32(e.seed));
+    else if(e.t==='ctree') drawClumpTree(ctx, e.x*W, e.baseY*H, e.h*H, e.w*W, mulberry32(e.seed));
     else if(e.t==='palm') fanPalm(ctx, e.x*W, e.y*H, e.r*S*1.35, e.blades, e.spread, e.rot);
     else if(e.t==='leaf') bigLeaf(ctx, e.x*W, e.y*H, e.len*S*1.2, e.wr, e.rot);
     else if(e.t==='bush') bush(ctx, e.x*W, e.y*H, e.r*S);
