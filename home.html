@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>晨雾未醒 Verdant Mirage · 项目门户</title>
+  <meta name="description" content="晨雾未醒 Verdant Mirage — 黑客松项目门户：路演幻灯片、讲稿、设计方案与视觉画廊。">
+  <style>
+    :root {
+      /* ---- fonts ---- */
+      --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
+      --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "SF Mono", "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+
+      /* ---- fixed decorative accents ---- */
+      --plume-g: 143 190 108;
+      --plume-o: 232 145 60;
+
+      /* ---- calm DAWN palette ---- */
+      --bg-a: 250 236 212;
+      --bg-b: 240 230 216;
+      --bg-c: 224 224 210;
+      --ink: 43 54 66;
+      --ink-soft: 86 96 104;
+      --ink-dim: 130 138 144;
+      --accent: 176 88 50;
+      --line: 92 80 68;
+      --panel: 120 110 96;
+      --foliage-far: 158 176 146;
+      --foliage-mid: 128 156 114;
+      --foliage-near: 104 138 92;
+      --branch: 176 96 68;
+      --berry: 178 80 96;
+      --glow-warm: 248 210 150;
+      --glow-cool: 214 204 222;
+      --halo: 255 250 240;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: rgb(var(--bg-b));
+      color: rgb(var(--ink));
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ---------- atmospheric backdrop ---------- */
+    .backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .backdrop::after {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(48% 42% at 22% 82%, rgb(var(--glow-warm) / .24), transparent 70%),
+        radial-gradient(40% 38% at 74% 20%, rgb(var(--line) / .10), transparent 70%),
+        radial-gradient(55% 50% at 88% 78%, rgb(var(--glow-cool) / .18), transparent 72%),
+        linear-gradient(160deg, rgb(var(--bg-a)) 0%, rgb(var(--bg-b)) 45%, rgb(var(--bg-c)) 100%);
+    }
+    .scene { position: absolute; inset: -2%; width: 104%; height: 104%; z-index: 1; opacity: .85; }
+    .foliage-far { fill: rgb(var(--foliage-far)); }
+    .foliage-mid { fill: rgb(var(--foliage-mid)); }
+    .foliage-near { fill: rgb(var(--foliage-near)); }
+    .branches { stroke: rgb(var(--branch)); }
+    .berries { fill: rgb(var(--berry)); }
+    .mist-layer {
+      position: absolute; inset: 0; z-index: 2;
+      background:
+        radial-gradient(62% 44% at 50% 22%, rgba(255,250,240,.34), transparent 72%),
+        linear-gradient(180deg, rgba(255,248,236,.22), transparent 42%);
+      mix-blend-mode: screen;
+    }
+    .fireflies { position: absolute; inset: 0; z-index: 3; }
+    .firefly {
+      position: absolute; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,244,200,.9), rgba(255,214,120,.5) 42%, transparent 72%);
+      filter: blur(.3px); opacity: 0;
+      animation: drift var(--dur,16s) ease-in-out var(--delay,0s) infinite;
+    }
+    @keyframes drift {
+      0% { transform: translate(0,0) scale(.6); opacity: 0; }
+      14% { opacity: var(--peak,.7); }
+      50% { transform: translate(var(--dx,40px), var(--dy,-60px)) scale(1); opacity: var(--peak,.7); }
+      82% { opacity: calc(var(--peak,.7) * .45); }
+      100% { transform: translate(calc(var(--dx,40px)*.4), calc(var(--dy,-60px)*1.4)) scale(.7); opacity: 0; }
+    }
+    .grain {
+      position: absolute; inset: 0; z-index: 4; opacity: .045; pointer-events: none;
+      background-image: radial-gradient(rgb(var(--line)) 1px, transparent 1px);
+      background-size: 4px 4px;
+    }
+
+    /* ---------- layout ---------- */
+    .wrap { position: relative; z-index: 5; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    /* hero */
+    .hero {
+      min-height: 88vh; min-height: 88dvh;
+      display: flex; flex-direction: column; justify-content: center;
+      text-align: center; padding: 80px 24px 56px;
+    }
+    .eyebrow {
+      font-family: var(--mono); font-size: .74rem; letter-spacing: .34em;
+      text-transform: uppercase; color: rgb(var(--accent));
+      display: inline-flex; align-items: center; gap: 12px; justify-content: center;
+      margin-bottom: 26px;
+    }
+    .eyebrow::before, .eyebrow::after {
+      content: ""; width: 30px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgb(var(--accent)));
+    }
+    .eyebrow::after { background: linear-gradient(90deg, rgb(var(--accent)), transparent); }
+    .hero h1 {
+      font-family: var(--serif); font-weight: 600; line-height: 1.04;
+      font-size: clamp(2.4rem, 7vw, 4.8rem); letter-spacing: .01em;
+      text-shadow: 0 0 22px rgb(var(--halo) / .4);
+    }
+    .hero .en {
+      display: block; font-family: var(--serif); font-style: italic; font-weight: 500;
+      font-size: clamp(1rem, 2.6vw, 1.7rem); color: rgb(var(--ink-soft));
+      letter-spacing: .08em; margin-top: 16px;
+    }
+    .hero .tagline {
+      font-family: var(--serif); font-style: italic;
+      font-size: clamp(1.1rem, 2.8vw, 1.7rem); color: rgb(var(--accent));
+      margin-top: 28px; line-height: 1.7;
+    }
+    .hero .sub {
+      margin: 22px auto 0; max-width: 560px;
+      font-size: .98rem; color: rgb(var(--ink-soft)); line-height: 1.9;
+    }
+    .scroll-hint {
+      margin-top: 46px; font-family: var(--mono); font-size: .7rem;
+      letter-spacing: .26em; text-transform: uppercase; color: rgb(var(--ink-dim));
+      display: inline-flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .scroll-hint .dot { width: 1px; height: 34px; background: linear-gradient(180deg, rgb(var(--accent)), transparent); animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:.3 } 50% { opacity:1 } }
+
+    /* ---------- section ---------- */
+    .section { padding: 24px 0 64px; }
+    .sec-head { text-align: center; margin-bottom: 42px; }
+    .sec-head .kicker {
+      font-family: var(--mono); font-size: .72rem; letter-spacing: .28em;
+      text-transform: uppercase; color: rgb(var(--accent)); display: block; margin-bottom: 12px;
+    }
+    .sec-head h2 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: .01em;
+    }
+    .sec-head .divider { height: 1px; width: 120px; margin: 18px auto 0;
+      background: linear-gradient(90deg, transparent, rgb(var(--accent) / .6), transparent); }
+
+    /* ---------- card grid ---------- */
+    .grid {
+      display: grid; gap: 22px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+    .card {
+      position: relative; display: block; text-decoration: none; color: inherit;
+      background: rgb(var(--halo) / .55);
+      border: 1px solid rgb(var(--line) / .14);
+      border-radius: 18px; padding: 30px 28px 26px;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 14px 40px rgb(var(--line) / .10);
+      overflow: hidden; transition: transform .4s cubic-bezier(.2,.7,.2,1), box-shadow .4s, border-color .4s;
+    }
+    .card::before {
+      content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity .4s;
+      background: radial-gradient(120% 90% at 80% 0%, rgb(var(--glow-warm) / .18), transparent 60%);
+    }
+    .card:hover { transform: translateY(-6px); border-color: rgb(var(--accent) / .4);
+      box-shadow: 0 22px 56px rgb(var(--line) / .18); }
+    .card:hover::before { opacity: 1; }
+    .card .ico {
+      width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+      background: linear-gradient(135deg, rgb(var(--accent) / .16), rgb(var(--plume-o) / .14));
+      border: 1px solid rgb(var(--accent) / .22); margin-bottom: 20px;
+    }
+    .card .ico svg { width: 26px; height: 26px; stroke: rgb(var(--accent)); fill: none; stroke-width: 1.6; }
+    .card h3 { font-family: var(--serif); font-weight: 600; font-size: 1.32rem; letter-spacing: .01em; }
+    .card .en { display:block; font-family: var(--mono); font-size: .68rem; letter-spacing: .22em;
+      text-transform: uppercase; color: rgb(var(--ink-dim)); margin-top: 6px; }
+    .card p { margin-top: 14px; font-size: .94rem; color: rgb(var(--ink-soft)); line-height: 1.8; }
+    .card .go {
+      margin-top: 20px; display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: .74rem; letter-spacing: .12em; color: rgb(var(--accent));
+    }
+    .card .go .arrow { transition: transform .35s; }
+    .card:hover .go .arrow { transform: translateX(5px); }
+
+    /* feature row */
+    .feature {
+      margin-top: 56px; display: grid; gap: 26px; grid-template-columns: 1.1fr 1fr;
+      align-items: center; background: rgb(var(--halo) / .5);
+      border: 1px solid rgb(var(--line) / .12); border-radius: 20px; overflow: hidden;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 16px 46px rgb(var(--line) / .10);
+    }
+    .feature .ft-text { padding: 38px 40px; }
+    .feature .ft-text h3 { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; }
+    .feature .ft-text p { margin-top: 14px; color: rgb(var(--ink-soft)); line-height: 1.9; font-size: .98rem; }
+    .feature .ft-media { background: rgb(var(--line) / .06); min-height: 260px; display: grid; place-items: center; position: relative; }
+    .feature .ft-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .feature .ft-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* footer */
+    footer { position: relative; z-index: 5; text-align: center; padding: 40px 24px 56px; }
+    footer .line { height: 1px; width: 200px; margin: 0 auto 26px;
+      background: linear-gradient(90deg, transparent, rgb(var(--line) / .3), transparent); }
+    footer p { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; color: rgb(var(--ink-dim)); }
+    footer a { color: rgb(var(--accent)); text-decoration: none; }
+
+    @media (max-width: 720px) {
+      .feature { grid-template-columns: 1fr; }
+      .feature .ft-media { min-height: 200px; }
+      .hero { padding-top: 64px; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- atmospheric backdrop -->
+  <div class="backdrop">
+    <svg class="scene" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <g class="branches" fill="none" stroke-width="3" opacity=".55" stroke-linecap="round">
+        <path d="M-20 900 C 120 720 180 640 160 500 C 150 430 210 360 250 300" />
+        <path d="M1460 900 C 1320 740 1270 650 1300 520 C 1320 440 1260 380 1210 320" />
+        <path d="M250 300 C 300 260 360 250 420 270" />
+        <path d="M1210 320 C 1160 280 1100 272 1040 296" />
+      </g>
+      <g class="foliage-far" opacity=".5">
+        <path d="M120 470 q 90 -120 200 -110 q -40 90 -200 110 Z" />
+        <path d="M1320 500 q -90 -120 -200 -108 q 40 88 200 108 Z" />
+      </g>
+      <g class="foliage-mid" opacity=".7">
+        <path d="M180 520 q 130 -160 280 -150 q -56 120 -280 150 Z" />
+        <path d="M1260 540 q -130 -160 -280 -148 q 56 118 280 148 Z" />
+      </g>
+      <g class="foliage-near" opacity=".9">
+        <path d="M250 600 q 160 -190 340 -178 q -70 150 -340 178 Z" />
+        <path d="M1190 620 q -160 -190 -340 -176 q 70 146 340 176 Z" />
+      </g>
+      <g class="berries" opacity=".8">
+        <circle cx="470" cy="470" r="6" /><circle cx="520" cy="500" r="5" />
+        <circle cx="980" cy="500" r="6" /><circle cx="930" cy="470" r="5" />
+      </g>
+    </svg>
+    <div class="mist-layer"></div>
+    <div class="fireflies" id="fireflies"></div>
+    <div class="grain"></div>
+  </div>
+
+  <!-- hero -->
+  <header class="hero wrap">
+    <div class="eyebrow">Verdant Mirage · Hackathon</div>
+    <h1>晨雾未醒</h1>
+    <span class="en">Verdant Mirage</span>
+    <p class="tagline">「当世界尚未苏醒，<br>梦境仍悬在枝头，微微发亮。」</p>
+    <p class="sub">一个关于「睡前倾听—梦中造境—醒后归还」的互动叙事装置。下面是你向外分享时最该打开的入口。</p>
+    <div class="scroll-hint"><span>向下探索</span><span class="dot"></span></div>
+  </header>
+
+  <!-- cards -->
+  <main class="section wrap">
+    <div class="sec-head">
+      <span class="kicker">Explore the project</span>
+      <h2>从这里进入项目</h2>
+      <div class="divider"></div>
+    </div>
+
+    <div class="grid">
+      <a class="card" href="verdant-mirage-pitch-v2.html">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <h3>路演幻灯片</h3>
+        <span class="en">Pitch Deck</span>
+        <p>面向评委的完整 slides，讲清产品愿景、玩法与差异化。</p>
+        <span class="go">打开 <span class="arrow">→</span></span>
+      </a>
+
+      <a class="card" href="verdant-mirage-talk-track.html">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v18M8 7h6a3 3 0 0 1 0 6H8m0 0h7"/></svg></div>
+        <h3>3 分钟讲稿</h3>
+        <span class="en">Talk Track</span>
+        <p>逐段可朗读的脚本，配阅读进度与滚动渐显，照着念就行。</p>
+        <span class="go">打开 <span class="arrow">→</span></span>
+      </a>
+
+      <a class="card" href="verdant-mirage-product-design.html">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M9 5v14"/></svg></div>
+        <h3>产品设计方案</h3>
+        <span class="en">Product Design</span>
+        <p>9 章 + 附表的完整设计文档，含倾听者铁律、PFA 立场等。</p>
+        <span class="go">打开 <span class="arrow">→</span></span>
+      </a>
+
+      <a class="card" href="gallery.html">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 16l5-4 4 3 3-2 6 5"/></svg></div>
+        <h3>设计视觉画廊</h3>
+        <span class="en">Visual Gallery</span>
+        <p>6 张梦境分段主视觉：入梦、倾听、集梦、显影、归还、如睡。</p>
+        <span class="go">打开 <span class="arrow">→</span></span>
+      </a>
+
+      <a class="card" href="prototype/style-lab.html">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5 2 7L12 17l-6.5 4 2-7L2 9.5 9 9z"/></svg></div>
+        <h3>原型 / Style Lab</h3>
+        <span class="en">Prototype</span>
+        <p>可交互的视觉与动效实验场，验证氛围与手感。</p>
+        <span class="go">打开 <span class="arrow">→</span></span>
+      </a>
+
+      <a class="card" href="knowledge-framework.md">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM12 5v14M4 12h16"/></svg></div>
+        <h3>知识框架</h3>
+        <span class="en">Knowledge Framework</span>
+        <p>项目背后的理念与方法论梳理，适合想深读的伙伴。</p>
+        <span class="go">打开 <span class="arrow">→</span></span>
+      </a>
+    </div>
+
+    <!-- feature: opening animation -->
+    <div class="feature">
+      <div class="ft-text">
+        <h3>开屏动画</h3>
+        <p>进入体验的第一帧：雾从林间升起，萤火在枝头亮起。把它当作整段叙事的"呼吸起点"。</p>
+        <p style="margin-top:14px"><a class="go" href="开屏动画.mp4" style="color:rgb(var(--accent));text-decoration:none;font-family:var(--mono);font-size:.8rem;letter-spacing:.1em">观看视频 →</a></p>
+      </div>
+      <div class="ft-media">
+        <video src="开屏动画.mp4" controls preload="metadata" poster="design/visuals/01-ruMeng-entering-dream.png"></video>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="line"></div>
+    <p>晨雾未醒 · Verdant Mirage — 由 <a href="https://github.com/ivychhh/Qi_Game">ivychhh / Qi_Game</a> 托管于 GitHub Pages</p>
+  </footer>
+
+  <script>
+    // generate drifting fireflies
+    (function () {
+      const box = document.getElementById('fireflies');
+      const N = 16;
+      for (let i = 0; i < N; i++) {
+        const f = document.createElement('span');
+        f.className = 'firefly';
+        const size = 2 + Math.random() * 4;
+        f.style.width = f.style.height = size + 'px';
+        f.style.left = (Math.random() * 100) + '%';
+        f.style.top = (Math.random() * 100) + '%';
+        f.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+        f.style.setProperty('--dy', (Math.random() * -120 - 20) + 'px');
+        f.style.setProperty('--dur', (12 + Math.random() * 14) + 's');
+        f.style.setProperty('--delay', (Math.random() * 10) + 's');
+        f.style.setProperty('--peak', (0.45 + Math.random() * 0.4).toFixed(2));
+        box.appendChild(f);
+      }
+    })();
+  </script>
+</body>
+
+</html>
