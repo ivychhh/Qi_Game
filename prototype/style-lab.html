@@ -1076,17 +1076,27 @@ function revealUI(){
 
 /* ---------- main loop + auto-degrade ---------- */
 function loop(now){
-  cx2.setTransform(DPR,0,0,DPR,0,0);
+  try {
+    cx2.setTransform(DPR,0,0,DPR,0,0);
 
-  if(mode==='entry') drawEntry(now);
-  else if(mode==='flash') drawFlash(now);
-  else drawScene(now);
+    if(mode==='entry') drawEntry(now);
+    else if(mode==='flash') drawFlash(now);
+    else drawScene(now);
 
-  // perf guard
-  frameTimes.push(now);
-  if(frameTimes.length>90){
-    const span=frameTimes[89]-frameTimes[0]; frameTimes=[];
-    if(!degraded && span/89>30){ degraded=true; buildFog(); buildFlies(); }
+    // perf guard
+    frameTimes.push(now);
+    if(frameTimes.length>90){
+      const span=frameTimes[89]-frameTimes[0]; frameTimes=[];
+      if(!degraded && span/89>30){ degraded=true; buildFog(); buildFlies(); }
+    }
+  } catch(e) {
+    // Safety net: show error visibly on canvas so we know rendering broke
+    cx2.fillStyle = '#331111';
+    cx2.fillRect(0,0,W||window.innerWidth,H||window.innerHeight);
+    cx2.fillStyle = '#ff6666';
+    cx2.font = '14px monospace';
+    cx2.fillText('Render error: ' + (e.message||e), 20, 50);
+    console.error('style-lab render loop error:', e);
   }
   requestAnimationFrame(loop);
 }
@@ -1327,12 +1337,18 @@ $('btn-import').addEventListener('click',()=>{
 
 // Replay entry button
 $('btnReplay').addEventListener('click',()=>{
-  uiRevealed=false; drawFlash.sceneReady=false;
-  $('title').style.opacity=0; $('panel').classList.add('hidden');
-  $('pill').classList.remove('on'); $('fullscreen-toggle').classList.remove('on');
-  buildEntry();
-  tStart=performance.now(); mode='entry';
-  if(reduceMotion){ toFlash(); } else { $('skip').style.opacity=1; }
+  // Brief flash transition to restart
+  $('title').style.opacity=0;
+  $('panel').classList.add('hidden');
+  $('pill').classList.remove('on');
+  $('fullscreen-toggle').classList.remove('on');
+  const el=$('flash');
+  el.style.opacity='1';
+  el.style.transition='opacity 0.3s ease';
+  tStart=performance.now();
+  mode='scene';
+  uiRevealed=false;
+  setTimeout(()=>{ el.style.opacity='0'; revealUI(); }, 400);
 });
 
 // Panel collapse / pill toggle
@@ -1374,8 +1390,9 @@ function rebuildAll(){
 
 /* ---------- resize ---------- */
 function resize(){
-  DPR=Math.min(2,window.devicePixelRatio||1);
-  const winW=window.innerWidth, winH=window.innerHeight;
+  DPR=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+  const winW=window.innerWidth||document.documentElement.clientWidth||1024;
+  const winH=window.innerHeight||document.documentElement.clientHeight||768;
 
   if(CONFIG.portraitMode){
     // 9:16 phone ratio — constrain canvas to portrait aspect
@@ -1394,14 +1411,17 @@ function resize(){
     cv.style.top=(winH-H)/2+'px';
     cv.style.width=W+'px';
     cv.style.height=H+'px';
+    cv.style.right='auto';
+    cv.style.bottom='auto';
     document.body.style.background='#000';
   } else {
     W=winW; H=winH;
     effectiveW=W; effectiveH=H;
     cv.style.position='fixed';
     cv.style.left='0'; cv.style.top='0';
-    cv.style.width=W+'px';
-    cv.style.height=H+'px';
+    cv.style.right='0'; cv.style.bottom='0';
+    cv.style.width='';
+    cv.style.height='';
     document.body.style.background='';
   }
 
@@ -1417,8 +1437,14 @@ let rsT; window.addEventListener('resize',()=>{ clearTimeout(rsT); rsT=setTimeou
 
 /* ---------- boot ---------- */
 resize();
-if(reduceMotion){ toFlash(); }
-else{ setTimeout(()=>{ if(mode==='entry') $('skip').style.opacity=1; },800); }
+// Go straight to scene — skip the dark entry animation
+mode='scene';
+uiRevealed=true;
+// Show UI immediately
+setTimeout(()=>{
+  document.getElementById('panel').classList.remove('hidden');
+  document.getElementById('fullscreen-toggle').classList.add('on');
+}, 400);
 requestAnimationFrame(loop);
 </script>
 </body>
