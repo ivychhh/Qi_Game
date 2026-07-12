@@ -831,6 +831,17 @@ function startGate(){
   }, 500);
 }
 
+function hideGateUI(){
+  const gh = document.getElementById('gate-hint');
+  gh.style.transition = 'none';
+  gh.style.opacity = '0';
+  gh.classList.remove('pulse');
+  const gv = document.getElementById('gate-glow');
+  gv.style.transition = 'none';
+  gv.style.opacity = '0';
+  gv.style.display = 'none';
+}
+
 function onGateTap(x,y){
   if(mode!=='gate') return;
   if(!inDoorHitbox(x,y)) return;                 // touches outside the door do nothing
@@ -839,7 +850,7 @@ function onGateTap(x,y){
   const gh = document.getElementById('gate-hint');
   gh.classList.remove('pulse'); gh.style.opacity = '0';
 
-  if(reduceMotion){ enterDownstream(); return; } // no surge — direct switch
+  if(reduceMotion){ hideGateUI(); enterDownstream(); return; } // no surge — direct switch
   mode = 'gateSurge';
   surgeT0 = performance.now();
   startGlowVeil();
@@ -886,6 +897,7 @@ function enterDownstream(){
   else enterScene();
 }
 function enterScene(){
+  hideGateUI();  // safety net: kill gate DOM regardless of which path arrived here
   tStart = performance.now();
   videoDone = true;
   mode = 'scene';
