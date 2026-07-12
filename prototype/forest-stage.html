@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>晨雾未醒 · 森林舞台</title>
+<style>
+  :root{
+    --serif: "Songti SC","STSong","Source Han Serif SC","Noto Serif SC",Georgia,serif;
+    --sans: "PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    --mono: "SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ background:#000; overflow:hidden; width:100%; height:100%; }
+
+  #stage{ position:fixed; inset:0; display:block; touch-action:none; cursor:crosshair; }
+
+  #fade{ position:fixed; inset:0; background:#000; z-index:50; pointer-events:none;
+    transition:opacity 2s ease; opacity:1; }
+
+  #title{
+    position:fixed; left:0; right:0; top:14%; text-align:center; z-index:20;
+    pointer-events:none; opacity:0; transition:opacity 2.4s ease;
+  }
+  #title .cn{ font-family:var(--serif); font-weight:500; font-size:clamp(1.6rem,6vw,2.6rem);
+    letter-spacing:.42em; text-indent:.42em; color:#fff; text-shadow:0 0 24px rgba(255,255,255,.35); }
+  #title .en{ display:block; margin-top:14px; font-family:var(--serif); font-style:italic;
+    font-size:clamp(.7rem,2.4vw,.95rem); letter-spacing:.3em; color:rgba(255,255,255,.72); }
+  #title .tag{ display:block; margin-top:18px; font-family:var(--serif);
+    font-size:clamp(.68rem,2.2vw,.85rem); letter-spacing:.18em; color:rgba(255,255,255,.5); }
+
+  .whisper{
+    position:fixed; z-index:20; pointer-events:none; transform:translate(-50%,-100%);
+    font-family:var(--serif); font-size:.85rem; letter-spacing:.14em; color:rgba(255,255,255,.85);
+    text-shadow:0 1px 12px rgba(0,0,0,.5); opacity:0; transition:opacity 1.2s ease;
+  }
+
+  #hint{
+    position:fixed; left:0; right:0; bottom:calc(40px + env(safe-area-inset-bottom)); text-align:center; z-index:20;
+    pointer-events:none; font-family:var(--serif); font-size:.82rem; letter-spacing:.3em; text-indent:.3em;
+    color:rgba(255,255,255,.5); text-shadow:0 1px 8px rgba(0,0,0,.4);
+    opacity:0; transition:opacity 2s ease;
+  }
+
+  #error-bar{
+    position:fixed; z-index:100; top:0; left:0; right:0;
+    background:rgba(180,40,30,.92); color:#fff; font-family:var(--mono);
+    font-size:.7rem; padding:8px 14px; display:none; white-space:pre-wrap;
+  }
+
+  #pill{
+    position:fixed; z-index:25; right:14px; bottom:calc(14px + env(safe-area-inset-bottom));
+    background:rgba(10, 18, 16, .72); border:1px solid rgba(255,255,255,.14); border-radius:22px;
+    color:#E8F1EC; font-family:var(--serif); font-size:.8rem; letter-spacing:.2em;
+    padding:9px 18px; cursor:pointer; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    opacity:0; pointer-events:none; transition:opacity .5s ease;
+  }
+  #pill.on{ opacity:1; pointer-events:auto; }
+  #pill:focus-visible{ outline:2px solid #E8F1EC; outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+<div id="fade" aria-hidden="true"></div>
+<div id="error-bar" aria-live="assertive"></div>
+<div id="title" aria-hidden="true">
+  <div class="cn">晨雾未醒</div>
+  <span class="en">Verdant Mirage</span>
+  <span class="tag">森林的雾还未散，都还来得及</span>
+</div>
+<div id="whisper" class="whisper"></div>
+<div id="hint">轻触树洞</div>
+<button id="pill">◧ 全屏</button>
+
+<script>
+'use strict';
+
+/* ============================================================
+   晨雾未醒 · 森林舞台
+   纯沉浸场景 — 无控制面板，只有森林在呼吸
+   渲染引擎复用 style-lab，CONFIG 单一真相源
+   ============================================================ */
+
+/* ---------- CONFIG — defaults = Scented Mist (青雾) ---------- */
+const CONFIG = {
+  preset: '青雾',
+  fog: 60, fogSpeed: 0.5, fogLayers: 3,
+  hueShift: 0, saturation: 1.0,
+  fly: 45, flySize: 1.0, flyGlow: 70, flyRange: 1.0, flySpeed: 1.0,
+  breathAmp: 60, breathPeriod: 6.0,
+  parallaxLayers: 5, parallaxIntensity: 65,
+  strokeWidth: 0,
+  portraitMode: true,
+};
+
+/* ---------- BASE_PALETTES ---------- */
+const BASE_PALETTES = {
+  '青雾': {
+    sky:['#0B2429','#17454A','#2C6B6B'], glow:'#C8F0E4',
+    layers:['#7FB5AE','#4E8D88','#2F6B67','#1C4A48','#102F30'],
+    fog:'#BFE3DB', fly:'#D8FFEF', accent:'#B04A5A', eye:'#EAFFF6', ground:'#5E9B94'
+  },
+  '深渊': {
+    sky:['#07040F','#150B26','#241440'], glow:'#A8F0C8',
+    layers:['#5E4E86','#443768','#2F2450','#1E1738','#120D24'],
+    fog:'#8E7BB8', fly:'#A9F5C4', accent:'#59D8B0', eye:'#CFFFE0', ground:'#4A3C74'
+  },
+  '霓夜': {
+    sky:['#04050C','#0A0F22','#131A38'], glow:'#7FD8FF',
+    layers:['#3D5580','#2C3E66','#1E2B4C','#131D36','#0A1122'],
+    fog:'#5570A8', fly:'#8FE8FF', accent:'#FF5F9E', eye:'#B8F2FF', ground:'#31456F'
+  },
+  '晨光': {
+    sky:['#3A2244','#7A4460','#C97F6F'], glow:'#FFDFAE',
+    layers:['#D89C82','#A96C74','#7C4C64','#543452','#33203C'],
+    fog:'#F2C8A2', fly:'#FFDA9E', accent:'#FF9E6B', eye:'#FFF3D8', ground:'#B87A72'
+  }
+};
+
+/* ---------- color helpers ---------- */
+function hexToHsl(hex){
+  let [r,g,b] = [parseInt(hex.slice(1,3),16)/255, parseInt(hex.slice(3,5),16)/255, parseInt(hex.slice(5,7),16)/255];
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2;
+  if(mx===mn) return [0,0,l];
+  const d=mx-mn, s=l>.5?d/(2-mx-mn):d/(mx+mn);
+  let h;
+  if(mx===r) h=(g-b)/d+(g<b?6:0);
+  else if(mx===g) h=(b-r)/d+2;
+  else h=(r-g)/d+4;
+  return [h*60, s, l];
+}
+function hslToHex(h,s,l){
+  h=((h%360)+360)%360;
+  const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
+  let [r,g,b]=[0,0,0];
+  if(h<60) [r,g,b]=[c,x,0];
+  else if(h<120) [r,g,b]=[x,c,0];
+  else if(h<180) [r,g,b]=[0,c,x];
+  else if(h<240) [r,g,b]=[0,x,c];
+  else if(h<300) [r,g,b]=[x,0,c];
+  else [r,g,b]=[c,0,x];
+  return '#'+[r,g,b].map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');
+}
+function shiftHex(hex, hueShift, satMul){
+  if(hueShift===0 && satMul===1) return hex;
+  let [h,s,l] = hexToHsl(hex);
+  h = (h + hueShift + 360) % 360;
+  s = Math.min(1, Math.max(0, s * satMul));
+  return hslToHex(h, s, l);
+}
+function shiftPalette(base, hueShift, satMul){
+  const out = {};
+  for(const [k,v] of Object.entries(base)){
+    if(Array.isArray(v)) out[k] = v.map(c=>shiftHex(c, hueShift, satMul));
+    else out[k] = shiftHex(v, hueShift, satMul);
+  }
+  return out;
+}
+let _palCache = null, _palKey = '';
+function pal(){
+  const key = `${CONFIG.preset}|${CONFIG.hueShift}|${CONFIG.saturation}`;
+  if(_palKey===key && _palCache) return _palCache;
+  _palCache = shiftPalette(BASE_PALETTES[CONFIG.preset], CONFIG.hueShift, CONFIG.saturation);
+  _palKey = key;
+  return _palCache;
+}
+
+/* ---------- utils ---------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeInOut=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function hexRgb(h){ const n=parseInt(h.slice(1),16); return [n>>16&255,n>>8&255,n&255]; }
+function rgba(h,a){ const[r,g,b]=hexRgb(h); return `rgba(${r},${g},${b},${a})`; }
+function mix(h1,h2,t){ const a=hexRgb(h1),b=hexRgb(h2); return `rgb(${a.map((v,i)=>Math.round(lerp(v,b[i],t))).join(',')})`; }
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- canvas setup ---------- */
+const cv = document.getElementById('stage');
+const cx2 = cv.getContext('2d');
+let W=0, H=0, DPR=1, BLEED=56;
+let effectiveW=0, effectiveH=0;
+let tStart = performance.now();
+let mode = 'fadeIn'; // fadeIn | scene
+let geo = null, sprites = [];
+let fogBlobs = [], flies = [], ripples = [];
+let vignette = null, grain = null, fogSprite = null, flySprite = null;
+let listener = { x:0, y:0, rx:0, ry:0, blink:1, blinkT:0, nextBlink:2.5, pulse:0 };
+let pointer = { x:0, y:0, tx:0, ty:0 };
+let whisperIdx = 0, degraded = false;
+const WHISPERS = ['……','（它在听）','（光晃了晃）','（树洞更深处，有什么动了一下）'];
+let frameTimes = [];
+
+/* ============================================================
+   Organic tree shapes — extracted from style-lab
+   ============================================================ */
+
+function trunk(ctx,x,topY,botY,w,lean){
+  const midX=x+lean*(botY-topY)*.5;
+  const h=botY-topY;
+  const flare=w*.5;
+  ctx.beginPath();
+  ctx.moveTo(x-w/2-flare,botY);
+  ctx.bezierCurveTo(midX-w*.45,botY-h*.15, midX-w*.38,botY-h*.55, x+lean*h-w*.18,topY);
+  ctx.lineTo(x+lean*h+w*.18,topY);
+  ctx.bezierCurveTo(midX+w*.38,botY-h*.55, midX+w*.45,botY-h*.15, x+w/2+flare,botY);
+  ctx.closePath(); ctx.fill();
+  if(CONFIG.strokeWidth>0){ ctx.stroke(); }
+}
+
+function drawCanopyBlob(ctx,cx,cy,rw,rh,rand){
+  const n=5+Math.floor(rand()*4);
+  for(let i=0;i<n;i++){
+    const ox=(rand()-.5)*rw*1.2, oy=(rand()-.5)*rh*1.4;
+    const er=rw*(.35+rand()*.45), er2=rh*(.4+rand()*.5);
+    ctx.beginPath(); ctx.ellipse(cx+ox,cy+oy,er,er2,(rand()-.5)*.6,0,Math.PI*2); ctx.fill();
+    if(CONFIG.strokeWidth>0) ctx.stroke();
+  }
+}
+
+function drawFractalTree(ctx,x,baseY,h,w,lean,rand,depth,maxDepth){
+  if(depth>=maxDepth||h<3) return;
+  const topX=x+lean*h, topY=baseY-h, midY=baseY-h*.4;
+  const wTop=w*(.15+.1*depth/maxDepth);
+  const wg1=(rand()-.5)*w*.8, wg2=(rand()-.5)*w*.7;
+  ctx.beginPath();
+  ctx.moveTo(x-w/2,baseY);
+  ctx.bezierCurveTo(x-w*.35+wg1,midY, topX-wTop*.6+wg2,topY+h*.25, topX-wTop,topY);
+  ctx.lineTo(topX+wTop,topY);
+  ctx.bezierCurveTo(topX+wTop*.6+wg2,topY+h*.25, x+w*.35+wg1,midY, x+w/2,baseY);
+  ctx.closePath(); ctx.fill();
+  if(CONFIG.strokeWidth>0) ctx.stroke();
+  if(depth<maxDepth-1){
+    const nBranches=2+(rand()>.55?1:0);
+    for(let i=0;i<nBranches;i++){
+      const frac=.35+rand()*.40, bY=baseY-h*frac, bX=lerp(x,topX,frac);
+      const bH=h*(.35+rand()*.28), t=frac, segW=lerp(w,wTop,t), bW=segW*.55, bLean=(rand()-.5)*.9;
+      drawFractalTree(ctx,bX,bY,bH,bW,bLean,rand,depth+1,maxDepth);
+    }
+  }
+  if(depth>=1){ drawCanopyBlob(ctx,topX,topY-h*.05,h*.28,h*.18,rand); }
+}
+
+function drawNaturalPine(ctx,x,baseY,h,w,rand){
+  const nTiers=5+Math.floor(rand()*4), trunkW=Math.max(2,w*.08);
+  ctx.fillRect(x-trunkW/2,baseY-h*.28,trunkW,h*.28);
+  for(let i=0;i<nTiers;i++){
+    const frac=.12+.72*(1-i/nTiers), tY=baseY-h*frac;
+    const tW=w*(.25+.75*(1-i/nTiers)), tH=h*(.06+.05*rand());
+    const asym=(rand()-.5)*tW*.35, droop=(rand()-.2)*tH*.6;
+    ctx.beginPath();
+    ctx.moveTo(x-trunkW/2,tY);
+    ctx.bezierCurveTo(x-tW*.55+asym, tY-tH*.2+droop, x-tW*.5+rand()*tW*.18, tY-tH+droop, x-trunkW*.3, tY-tH*.7+droop);
+    ctx.bezierCurveTo(x+(rand()-.5)*trunkW, tY-tH*.85+droop, x+trunkW*.3, tY-tH*.7+droop, x+trunkW/2, tY);
+    ctx.bezierCurveTo(x+tW*.5-rand()*tW*.18, tY-tH+droop, x+tW*.55-asym, tY-tH*.2+droop, x+trunkW/2, tY);
+    ctx.closePath(); ctx.fill();
+    if(CONFIG.strokeWidth>0) ctx.stroke();
+  }
+}
+
+function drawClumpTree(ctx,x,baseY,h,w,rand){
+  const nTrunks=2+Math.floor(rand()*4);
+  for(let i=0;i<nTrunks;i++){
+    const tX=x+(rand()-.5)*w*.4, tH=h*(.6+rand()*.4), tW=w*(.12+rand()*.18), tLean=(rand()-.5)*.35, topX=tX+tLean*tH;
+    ctx.beginPath();
+    ctx.moveTo(tX-tW/2,baseY);
+    ctx.bezierCurveTo(tX-tW*.3,baseY-tH*.35, topX-tW*.7,baseY-tH*.7, topX-tW*.3,baseY-tH);
+    ctx.lineTo(topX+tW*.3,baseY-tH);
+    ctx.bezierCurveTo(topX+tW*.7,baseY-tH*.7, tX+tW*.3,baseY-tH*.35, tX+tW/2,baseY);
+    ctx.closePath(); ctx.fill();
+    if(CONFIG.strokeWidth>0) ctx.stroke();
+    drawCanopyBlob(ctx,topX,baseY-tH,tH*.22,tH*.14,rand);
+  }
+}
+
+function fanPalm(ctx,x,y,r,blades,spread,rot){
+  for(let i=0;i<blades;i++){
+    const a=rot-spread/2+spread*i/(blades-1), bw=r*.085;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(r*.5,-bw*1.6, r,-bw*.28);
+    ctx.quadraticCurveTo(r*.55,bw*.9, 0,bw*.5);
+    ctx.closePath(); ctx.fill();
+    if(CONFIG.strokeWidth>0) ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function bigLeaf(ctx,x,y,len,wr,rot){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  const w=len*wr;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(len*.18,-w, len*.72,-w*.82, len,-len*.04);
+  ctx.bezierCurveTo(len*.7,w*.7, len*.2,w*.85, 0,0);
+  ctx.closePath(); ctx.fill();
+  if(CONFIG.strokeWidth>0) ctx.stroke();
+  ctx.restore();
+}
+
+function bush(ctx,x,y,r){
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const bx=x+(i-2.5)*r*.42, br=r*(.55+.28*Math.sin(i*2.7));
+    ctx.moveTo(bx+br,y); ctx.arc(bx,y,br,0,Math.PI,true);
+  }
+  ctx.rect(x-r*1.6,y-1,r*3.2,r); ctx.fill();
+  if(CONFIG.strokeWidth>0) ctx.stroke();
+}
+
+function hangBranch(ctx,x0,drop,segs,color,accent,rand){
+  ctx.strokeStyle=color; ctx.lineCap='round';
+  let x=x0,y=-10;
+  ctx.lineWidth=drop*.045;
+  ctx.beginPath(); ctx.moveTo(x,y);
+  const pts=[[x,y]];
+  for(let i=1;i<=segs;i++){
+    x+=(rand()-.42)*drop*.4; y+=drop/segs;
+    ctx.quadraticCurveTo(x-(rand()-.5)*20,y-drop/segs/2,x,y); pts.push([x,y]);
+  }
+  ctx.stroke();
+  ctx.fillStyle=color;
+  for(let i=2;i<pts.length;i+=2){
+    bigLeaf(ctx,pts[i][0],pts[i][1],drop*.22,.5,(rand()*1.6-0.8)+Math.PI/3);
+    ctx.fillStyle=color;
+  }
+  const f=pts[pts.length-1];
+  ctx.fillStyle=accent;
+  ctx.beginPath(); ctx.arc(f[0],f[1]+6,drop*.055,0,7); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  ctx.beginPath(); ctx.arc(f[0]-drop*.018,f[1]+6-drop*.018,drop*.011,0,7); ctx.fill();
+}
+
+/* ============================================================
+   scene build — geometry (seeded)
+   ============================================================ */
+function buildGeometry(){
+  listener.rx = 0;
+  const rand = mulberry32(20260712);
+  const portrait = effectiveH > effectiveW;
+  const g = { layers:[[],[],[],[],[],[]], rand };
+  const L = CONFIG.parallaxLayers;
+  const seedBase = 71200;
+
+  const LCFG = [
+    [0.12,0.28, 0.008,0.018, 2, portrait?16:22],
+    [0.18,0.40, 0.012,0.028, 3, portrait?11:16],
+    [0.25,0.55, 0.016,0.038, 4, portrait?7:11],
+    [0.30,0.65, 0.020,0.048, 4, portrait?5:8],
+    [0.35,0.80, 0.024,0.060, 5, portrait?4:6],
+    [0.45,0.95, 0.028,0.075, 5, portrait?3:4],
+  ];
+
+  function randTree(layer, n){
+    const cfg=LCFG[layer];
+    for(let i=0;i<n;i++){
+      const x=.02+.96*((i+.5)/n+(rand()-.5)*.08);
+      const h=cfg[0]+rand()*(cfg[1]-cfg[0]);
+      const w=cfg[2]+rand()*(cfg[3]-cfg[2]);
+      const lean=(rand()-.5)*(layer<3?.12:.18);
+      const baseY=.58+rand()*.42;
+      const maxD=cfg[4];
+      const seed=seedBase+layer*1000+i;
+      g.layers[layer].push({t:'ftree', x, baseY, h, w, lean, seed, maxDepth:maxD});
+    }
+  }
+  function randPine(layer, n){
+    for(let i=0;i<n;i++){
+      const x=.04+.92*((i+.5)/n+(rand()-.5)*.07);
+      const h=LCFG[layer][0]*1.2+rand()*(LCFG[layer][1]*1.1-LCFG[layer][0]*1.2);
+      const w=LCFG[layer][2]*1.5+rand()*(LCFG[layer][3]*1.4-LCFG[layer][2]*1.5);
+      const baseY=.60+rand()*.35;
+      g.layers[layer].push({t:'npine', x, baseY, h, w, seed:seedBase+layer*1000+500+n+i});
+    }
+  }
+
+  if(L>0) randTree(0,LCFG[0][5]);
+
+  if(L>1){
+    g.layers[1].push({t:'path'});
+    randTree(1,LCFG[1][5]-3);
+    randPine(1, portrait?3:5);
+    g.layers[1].push({t:'palm', x:.06+rand()*.04, y:.58+rand()*.12, r:.25+rand()*.08, blades:6+Math.floor(rand()*3), spread:1.8+rand()*.4, rot:-.4+rand()*.2});
+    g.layers[1].push({t:'palm', x:.92+rand()*.05, y:.54+rand()*.12, r:.22+rand()*.08, blades:5+Math.floor(rand()*3), spread:1.6+rand()*.5, rot:Math.PI+.3+rand()*.2});
+    for(let i=0;i<(portrait?5:8);i++) g.layers[1].push({t:'bush', x:.05+.9*i/(portrait?4:7)+(rand()-.5)*.05, y:.78+rand()*.05, r:.04+rand()*.04});
+  }
+
+  if(L>2){
+    randTree(2,LCFG[2][5]-2);
+    randPine(2, portrait?2:4);
+    if(rand()>.35) g.layers[2].push({t:'ctree', x:.15+rand()*.7, baseY:.62+rand()*.3, h:.30+rand()*.25, w:.025+rand()*.035, seed:seedBase+2999});
+    g.layers[2].push({t:'leaf', x:-.02+rand()*.02, y:.70+rand()*.08, len:.30+rand()*.1, wr:.38+rand()*.08, rot:-.4+rand()*.3});
+    g.layers[2].push({t:'leaf', x:1.01+rand()*.03, y:.72+rand()*.12, len:.32+rand()*.1, wr:.38+rand()*.08, rot:Math.PI+.3+rand()*.3});
+    g.layers[2].push({t:'palm', x:.46+rand()*.08, y:1.0+rand()*.06, r:.20+rand()*.08, blades:7+Math.floor(rand()*2), spread:2.2+rand()*.6, rot:-Math.PI/2-1.1+rand()*.4});
+    for(let i=0;i<(portrait?4:6);i++) g.layers[2].push({t:'bush', x:.06+.88*i/(portrait?3:5)+(rand()-.5)*.06, y:.88+rand()*.06, r:.06+rand()*.05});
+    g.layers[2].push({t:'branch', x:.18+rand()*.1, drop:.25+rand()*.12});
+  }
+
+  if(L>3){
+    randTree(3,LCFG[3][5]);
+    g.layers[3].push({t:'leaf', x:-.03+rand()*.03, y:.96+rand()*.1, len:.48+rand()*.1, wr:.36+rand()*.08, rot:-.55+rand()*.25});
+    g.layers[3].push({t:'leaf', x:.06+rand()*.08, y:1.0+rand()*.1, len:.38+rand()*.1, wr:.40+rand()*.08, rot:-.9+rand()*.3});
+    g.layers[3].push({t:'leaf', x:1.02+rand()*.03, y:.98+rand()*.12, len:.50+rand()*.1, wr:.36+rand()*.08, rot:Math.PI+.5+rand()*.3});
+    g.layers[3].push({t:'palm', x:-.04+rand()*.04, y:.16+rand()*.1, r:.26+rand()*.1, blades:5+Math.floor(rand()*3), spread:1.3+rand()*.5, rot:.4+rand()*.3});
+    g.layers[3].push({t:'branch', x:.68+rand()*.1, drop:.30+rand()*.15});
+  }
+
+  if(L>4){
+    const lx = portrait ? .84 : .8;
+    g.layers[4].push({t:'trunk', x:lx, w:.18+rand()*.04, lean:.02+(rand()-.5)*.04, top:-.06, bot:1.06, listener:true});
+    randTree(4,LCFG[4][5]-1);
+    const farX = portrait ? .12 : .15;
+    g.layers[4].push({t:'ftree', x:farX+rand()*.06, baseY:.60+rand()*.3, h:.50+rand()*.30, w:.040+rand()*.030, lean:.06+(rand()-.5)*.1, seed:seedBase+4999, maxDepth:5});
+    g.layers[4].push({t:'leaf', x:lx-.13+rand()*.04, y:.12+rand()*.1, len:.22+rand()*.1, wr:.44+rand()*.1, rot:2.2+rand()*.5});
+    g.layers[4].push({t:'leaf', x:lx+.08+rand()*.05, y:.72+rand()*.12, len:.26+rand()*.1, wr:.42+rand()*.08, rot:Math.PI-.4+rand()*.3});
+    g.layers[4].push({t:'leaf', x:-.02+rand()*.03, y:-.04+rand()*.04, len:.36+rand()*.1, wr:.38+rand()*.08, rot:.8+rand()*.4});
+    g.layers[4].push({t:'leaf', x:.12+rand()*.08, y:-.06+rand()*.03, len:.26+rand()*.1, wr:.44+rand()*.1, rot:1.1+rand()*.3});
+  }
+
+  if(L>5){
+    g.layers[5].push({t:'ctree', x:.06+rand()*.12, baseY:.65+rand()*.25, h:.55+rand()*.35, w:.045+rand()*.030, seed:seedBase+5999});
+    g.layers[5].push({t:'ftree', x:.88+rand()*.08, baseY:.60+rand()*.30, h:.60+rand()*.30, w:.050+rand()*.025, lean:-.04+(rand()-.5)*.1, seed:seedBase+6999, maxDepth:5});
+    g.layers[5].push({t:'leaf', x:-.01+rand()*.03, y:1.0+rand()*.08, len:.56+rand()*.12, wr:.34+rand()*.08, rot:-.75+rand()*.2});
+    g.layers[5].push({t:'leaf', x:1.01+rand()*.03, y:1.02+rand()*.1, len:.54+rand()*.12, wr:.32+rand()*.08, rot:Math.PI+.6+rand()*.3});
+    g.layers[5].push({t:'palm', x:.01+rand()*.04, y:.08+rand()*.08, r:.30+rand()*.12, blades:6+Math.floor(rand()*2), spread:1.4+rand()*.5, rot:.6+rand()*.3});
+  }
+
+  return g;
+}
+
+function renderLayerSprite(k){
+  const c = document.createElement('canvas');
+  const w = W+2*BLEED, h = H+2*BLEED;
+  c.width = w*DPR; c.height = h*DPR;
+  const ctx = c.getContext('2d');
+  ctx.scale(DPR,DPR); ctx.translate(BLEED,BLEED);
+  const pcols = pal().layers;
+  const col = pcols[k]||pcols[pcols.length-1];
+  const fogged = mix(col, pal().fog, k===0?.12:k===1?.04:0);
+  ctx.fillStyle = fogged;
+  if(CONFIG.strokeWidth>0){
+    ctx.strokeStyle = rgba(pal().layers[4], CONFIG.strokeWidth/100*0.7);
+    ctx.lineWidth = CONFIG.strokeWidth/100*3;
+  }
+  const S = Math.min(W,H);
+  const layerData = geo.layers[k]||[];
+  for(const e of layerData){
+    ctx.fillStyle = fogged;
+    if(CONFIG.strokeWidth>0) ctx.strokeStyle = rgba(pal().layers[4], CONFIG.strokeWidth/100*0.7);
+    if(e.t==='trunk'){
+      trunk(ctx, e.x*W, e.top*H, e.bot*H, Math.max(3,e.w*W*(H>W?1.6:1)), e.lean);
+      if(e.listener){
+        const hx=e.x*W, hy=.56*H, rx=S*.075, ry=S*.1;
+        listener.x=hx; listener.y=hy; listener.rx=rx; listener.ry=ry;
+        ctx.fillStyle = mix(col,'#000000',.55);
+        ctx.beginPath(); ctx.ellipse(hx,hy,rx,ry,0,0,7); ctx.fill();
+        ctx.strokeStyle = rgba(pal().eye,.16); ctx.lineWidth=2;
+        ctx.beginPath(); ctx.ellipse(hx,hy,rx*1.06,ry*1.06,0,0,7); ctx.stroke();
+      }
+    }
+    else if(e.t==='ftree') drawFractalTree(ctx, e.x*W, e.baseY*H, e.h*H, e.w*W, e.lean, mulberry32(e.seed), 0, e.maxDepth||4);
+    else if(e.t==='npine') drawNaturalPine(ctx, e.x*W, e.baseY*H, e.h*H, e.w*W, mulberry32(e.seed));
+    else if(e.t==='ctree') drawClumpTree(ctx, e.x*W, e.baseY*H, e.h*H, e.w*W, mulberry32(e.seed));
+    else if(e.t==='palm') fanPalm(ctx, e.x*W, e.y*H, e.r*S*1.35, e.blades, e.spread, e.rot);
+    else if(e.t==='leaf') bigLeaf(ctx, e.x*W, e.y*H, e.len*S*1.2, e.wr, e.rot);
+    else if(e.t==='bush') bush(ctx, e.x*W, e.y*H, e.r*S);
+    else if(e.t==='branch') hangBranch(ctx, e.x*W, e.drop*H, 6, fogged, pal().accent, mulberry32(999+e.x*1000));
+    else if(e.t==='path'){
+      const gnd = mix(pal().ground, pal().fog, .25);
+      ctx.fillStyle = gnd;
+      ctx.beginPath();
+      ctx.moveTo(W*.5-W*.05, H*.6);
+      ctx.bezierCurveTo(W*.3,H*.72, W*.16,H*.86, W*.02,H*1.01);
+      ctx.lineTo(W*.98,H*1.01);
+      ctx.bezierCurveTo(W*.84,H*.84, W*.68,H*.7, W*.5+W*.05,H*.6);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = rgba(pal().layers[2],.5);
+      const r2 = mulberry32(77);
+      for(let i=0;i<7;i++){
+        const py=.66+.3*r2(), px=.5+(r2()-.5)*(.1+.5*(py-.66));
+        ctx.beginPath(); ctx.ellipse(px*W,py*H,S*(.015+.03*r2()),S*.011,0,0,7); ctx.fill();
+      }
+    }
+  }
+  return c;
+}
+
+function renderStatics(){
+  vignette = document.createElement('canvas');
+  vignette.width=W*DPR; vignette.height=H*DPR;
+  let ctx=vignette.getContext('2d'); ctx.scale(DPR,DPR);
+  const vg=ctx.createRadialGradient(W/2,H*.46,Math.min(W,H)*.35, W/2,H*.5,Math.max(W,H)*.78);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.42)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  grain = document.createElement('canvas'); grain.width=grain.height=128;
+  ctx=grain.getContext('2d');
+  const im=ctx.createImageData(128,128);
+  for(let i=0;i<im.data.length;i+=4){ const v=Math.random()*255|0; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=14; }
+  ctx.putImageData(im,0,0);
+
+  fogSprite = document.createElement('canvas'); fogSprite.width=fogSprite.height=256;
+  ctx=fogSprite.getContext('2d');
+  const fg=ctx.createRadialGradient(128,128,0,128,128,128);
+  fg.addColorStop(0,rgba(pal().fog,.5)); fg.addColorStop(.55,rgba(pal().fog,.22)); fg.addColorStop(1,rgba(pal().fog,0));
+  ctx.fillStyle=fg; ctx.fillRect(0,0,256,256);
+
+  flySprite = document.createElement('canvas'); flySprite.width=flySprite.height=64;
+  ctx=flySprite.getContext('2d');
+  const fl=ctx.createRadialGradient(32,32,0,32,32,32);
+  fl.addColorStop(0,rgba(pal().fly,.95)); fl.addColorStop(.25,rgba(pal().fly,.4)); fl.addColorStop(1,rgba(pal().fly,0));
+  ctx.fillStyle=fl; ctx.fillRect(0,0,64,64);
+}
+
+function buildFog(){
+  const rand=mulberry32(4242);
+  fogBlobs=[];
+  const n = degraded?8:14;
+  for(let i=0;i<n;i++){
+    fogBlobs.push({
+      x:rand()*1.4-.2, y:.18+rand()*.72, r:(.28+rand()*.5),
+      sp:(.004+rand()*.012)*(rand()>.5?1:-1), band:i%CONFIG.fogLayers, ph:rand()*7
+    });
+  }
+}
+function buildFlies(){
+  const rand=mulberry32(888);
+  flies=[];
+  const n = Math.round(CONFIG.fly/100 * (degraded?60:110));
+  for(let i=0;i<n;i++){
+    flies.push({
+      x:rand(), y:.15+rand()*.75, r:.8+rand()*2.4,
+      a1:rand()*7, a2:rand()*7, s1:.3+rand()*.7, s2:.3+rand()*.7,
+      tw:rand()*7, deep:rand()<.12, target:null
+    });
+  }
+}
+
+/* ============================================================
+   render — sky / fog bands / flies / eyes / ripples / scene
+   ============================================================ */
+function skyPaint(ctx,glowK){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  const p=pal();
+  g.addColorStop(0,p.sky[0]); g.addColorStop(.55,p.sky[1]); g.addColorStop(1,p.sky[2]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  const glowVal = CONFIG.flyGlow/100;
+  const gr=(0.25+glowVal*0.55)*Math.min(W,H);
+  const ga=(0.25+glowVal*0.75)*glowK;
+  const rg=ctx.createRadialGradient(W/2,H*.5,0,W/2,H*.5,gr);
+  rg.addColorStop(0,rgba(p.glow,.85*ga)); rg.addColorStop(.4,rgba(p.glow,.3*ga)); rg.addColorStop(1,rgba(p.glow,0));
+  ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+}
+function shafts(ctx,t){
+  const p=pal();
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<4;i++){
+    const x=W*(.3+.14*i), a=.028+.02*Math.sin(t*.3+i*2.1);
+    ctx.save(); ctx.translate(x,0); ctx.rotate(.06+i*.025);
+    const g=ctx.createLinearGradient(0,0,0,H*.8);
+    g.addColorStop(0,rgba(p.glow,a)); g.addColorStop(1,rgba(p.glow,0));
+    ctx.fillStyle=g; ctx.fillRect(-W*.02,0,W*.04,H*.8);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function drawFogBand(ctx,band,t,breath){
+  const base=(CONFIG.fog/100)*1.15;
+  if(base<=0.01) return;
+  const spdMult = CONFIG.fogSpeed;
+  const motMult = reduceMotion ? 0 : 1;
+  for(const b of fogBlobs){
+    if(b.band!==band) continue;
+    let bx=(b.x + t*b.sp*spdMult*motMult)%1.4; if(bx<-.2)bx+=1.4;
+    const alpha=base*(.5+.3*Math.sin(t*.2+b.ph))*(.8+.2*breath);
+    ctx.globalAlpha=clamp(alpha,0,1);
+    const r=b.r*Math.min(W,H);
+    ctx.drawImage(fogSprite,(bx-.1)*W-r, b.y*H-r*.62, r*2, r*1.24);
+  }
+  ctx.globalAlpha=1;
+}
+function drawFlies(ctx,t){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const spd = CONFIG.flySpeed, range = CONFIG.flyRange, sizeMul = CONFIG.flySize;
+  for(const f of flies){
+    let fx,fy;
+    if(f.target){
+      f.tp=Math.min(1,(t-f.t0)/2.4);
+      fx=lerp(f.sx,f.target[0],easeInOut(f.tp)); fy=lerp(f.sy,f.target[1],easeInOut(f.tp));
+      if(f.tp>=1){ f.x=fx/W; f.y=fy/H; f.target=null; }
+    } else {
+      const wob=reduceMotion?0:1;
+      fx=(f.x + Math.sin(t*f.s1*.35*spd+f.a1)*.015*range*wob)*W;
+      fy=(f.y + Math.sin(t*f.s2*.28*spd+f.a2)*.02*range*wob)*H;
+    }
+    const tw=.45+.55*Math.sin(t*1.4+f.tw)**2;
+    const sz=(f.deep?7:3.2)*f.r*sizeMul;
+    ctx.globalAlpha=tw*(f.deep?.8:.95);
+    ctx.drawImage(flySprite,fx-sz*2,fy-sz*2,sz*4,sz*4);
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
+function drawEyes(ctx,t){
+  const L=listener;
+  if(!L.rx) return;
+  if(t>L.nextBlink){ L.blinkT=t; L.nextBlink=t+2.6+Math.random()*4.5; }
+  const bt=t-L.blinkT;
+  L.blink = bt<.16 ? Math.abs(Math.sin(bt/.16*Math.PI)) < .5 ? .08 : 1 : 1;
+  const open = bt<.18 ? Math.max(.06,Math.abs(Math.cos(bt/.18*Math.PI))) : 1;
+  const dx=clamp((pointer.x-L.x)/(W+.001),-1,1)*L.rx*.16;
+  const dy=clamp((pointer.y-L.y)/(H+.001),-1,1)*L.ry*.1;
+  const pulse=1+L.pulse*.5;
+  const er=L.rx*.16*pulse, gap=L.rx*.42;
+  const p=pal();
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const s of [-1,1]){
+    const ex=L.x+s*gap+dx, ey=L.y-L.ry*.08+dy;
+    const gsz=er*5*(1+L.pulse);
+    ctx.globalAlpha=.5+.4*L.pulse+.12*Math.sin(t*1.2);
+    ctx.drawImage(flySprite,ex-gsz,ey-gsz,gsz*2,gsz*2);
+    ctx.globalAlpha=.95;
+    ctx.fillStyle=p.eye;
+    ctx.save(); ctx.translate(ex,ey); ctx.scale(1,open);
+    ctx.beginPath(); ctx.ellipse(0,0,er*.55,er,0,0,7); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  L.pulse*=.94;
+}
+function drawRipples(ctx,t){
+  const p=pal();
+  ripples=ripples.filter(r=>t-r.t0<1.6);
+  for(const r of ripples){
+    const time=(t-r.t0)/1.6;
+    ctx.strokeStyle=rgba(p.fly,(1-time)*.5);
+    ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(r.x,r.y,10+time*70,0,7); ctx.stroke();
+  }
+}
+
+const PARX_ALL=[4,9,15,24,34,45], PARY_ALL=[2,4,7,10,14,18], BAMP_ALL=[.0018,.003,.0045,.006,.0085,.011];
+
+function drawScene(now){
+  const t=(now-tStart)/1000;
+  const period = CONFIG.breathPeriod;
+  const amp = CONFIG.breathAmp/100;
+  const breath=reduceMotion?0:Math.sin(t*Math.PI*2/period)*amp;
+  const pi = CONFIG.parallaxIntensity/100;
+  pointer.x=lerp(pointer.x,pointer.tx,.04); pointer.y=lerp(pointer.y,pointer.ty,.04);
+  const px=(pointer.x/W-.5)*2*pi, py=(pointer.y/H-.5)*2*pi;
+  const sway=reduceMotion?0:Math.sin(t*.07)*3*pi;
+  const nLayers = CONFIG.parallaxLayers;
+
+  skyPaint(cx2,1+.06*breath);
+  if(!reduceMotion) shafts(cx2,t);
+  if(CONFIG.fogLayers>=1) drawFogBand(cx2,0,t,breath);
+
+  for(let k=0;k<nLayers;k++){
+    if(k===3 && CONFIG.fogLayers>=2) drawFogBand(cx2,1,t,breath);
+    cx2.save();
+    const s=1+BAMP_ALL[k]*breath;
+    cx2.translate(W/2,H*.62); cx2.scale(s,s); cx2.translate(-W/2,-H*.62);
+    cx2.translate(-px*PARX_ALL[k]-sway*(k+1)*.3, -py*PARY_ALL[k]);
+    if(sprites[k]) cx2.drawImage(sprites[k],-BLEED,-BLEED,W+2*BLEED,H+2*BLEED);
+    if(k===Math.min(4,nLayers-1) && listener.rx){ drawEyes(cx2,t); }
+    cx2.restore();
+  }
+  if(CONFIG.fogLayers>=3) drawFogBand(cx2,2,t,breath);
+  if(CONFIG.fogLayers>=4) drawFogBand(cx2,3,t,breath);
+  drawFlies(cx2,t);
+  drawRipples(cx2,t);
+  cx2.drawImage(vignette,0,0,W,H);
+  cx2.globalAlpha=.05;
+  cx2.drawImage(grain, reduceMotion?0:((t*7)%128)-128, reduceMotion?0:((t*3)%128)-128, W+256, H+256);
+  cx2.globalAlpha=1;
+}
+
+/* ---------- interaction ---------- */
+function interact(x,y,now){
+  if(mode!=='scene') return;
+  const L=listener;
+  const nearListener = L.rx && Math.hypot((x-L.x)/(L.rx*2.1),(y-L.y)/(L.ry*2.1))<1;
+  if(nearListener){
+    L.pulse=1; L.blinkT=(now-tStart)/1000-1;
+    ripples.push({x:L.x,y:L.y,t0:(now-tStart)/1000});
+    let sent=0;
+    for(const f of flies){ if(sent>=3) break; if(!f.target && Math.random()<.4){
+      f.target=[L.x+(Math.random()-.5)*L.rx, L.y-L.ry*.2+(Math.random()-.5)*L.ry*.5];
+      f.sx=f.x*W; f.sy=f.y*H; f.t0=(now-tStart)/1000; sent++; } }
+    const wp=document.getElementById('whisper');
+    wp.textContent=WHISPERS[whisperIdx++%WHISPERS.length];
+    wp.style.left=L.x+'px'; wp.style.top=(L.y-L.ry*1.5)+'px';
+    wp.style.opacity=1;
+    clearTimeout(interact._wt);
+    interact._wt=setTimeout(()=>wp.style.opacity=0,2600);
+  } else {
+    ripples.push({x,y,t0:(now-tStart)/1000});
+  }
+}
+
+cv.addEventListener('pointermove',e=>{
+  const rect=cv.getBoundingClientRect();
+  pointer.tx=e.clientX-rect.left; pointer.ty=e.clientY-rect.top;
+});
+cv.addEventListener('pointerdown',e=>{
+  const rect=cv.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  pointer.tx=x; pointer.ty=y;
+  interact(x,y,performance.now());
+});
+
+/* ---------- fullscreen toggle ---------- */
+const pill = document.getElementById('pill');
+pill.addEventListener('click',()=>{
+  CONFIG.portraitMode = !CONFIG.portraitMode;
+  pill.textContent = CONFIG.portraitMode ? '◧ 全屏' : '◧ 竖屏';
+  resize();
+});
+
+/* ---------- resize ---------- */
+function resize(){
+  DPR=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+  const winW=window.innerWidth||document.documentElement.clientWidth||1024;
+  const winH=window.innerHeight||document.documentElement.clientHeight||768;
+
+  if(CONFIG.portraitMode){
+    const ratio = 9/16;
+    if(winW/winH > ratio){ W = Math.round(winH*ratio); H = winH; }
+    else { W = winW; H = Math.round(winW/ratio); }
+    effectiveW=W; effectiveH=H;
+    cv.style.position='fixed';
+    cv.style.left=(winW-W)/2+'px'; cv.style.top=(winH-H)/2+'px';
+    cv.style.width=W+'px'; cv.style.height=H+'px';
+    cv.style.right='auto'; cv.style.bottom='auto';
+    document.body.style.background='#000';
+  } else {
+    W=winW; H=winH;
+    effectiveW=W; effectiveH=H;
+    cv.style.position='fixed';
+    cv.style.left='0'; cv.style.top='0'; cv.style.right='0'; cv.style.bottom='0';
+    cv.style.width=''; cv.style.height='';
+    document.body.style.background='#000';
+  }
+
+  cv.width=W*DPR; cv.height=H*DPR;
+  geo=buildGeometry();
+  renderStatics();
+  sprites=[];
+  for(let i=0;i<CONFIG.parallaxLayers;i++) sprites[i]=renderLayerSprite(i);
+  buildFog(); buildFlies();
+  pointer.x=pointer.tx=W/2; pointer.y=pointer.ty=H/2;
+}
+let rsT; window.addEventListener('resize',()=>{ clearTimeout(rsT); rsT=setTimeout(resize,180); });
+
+/* ---------- main loop ---------- */
+function loop(now){
+  try {
+    cx2.setTransform(DPR,0,0,DPR,0,0);
+    drawScene(now);
+    frameTimes.push(now);
+    if(frameTimes.length>90){
+      const span=frameTimes[89]-frameTimes[0]; frameTimes=[];
+      if(!degraded && span/89>30){ degraded=true; buildFog(); buildFlies(); }
+    }
+  } catch(e) {
+    document.getElementById('error-bar').style.display='block';
+    document.getElementById('error-bar').textContent='Render error: '+(e.message||e);
+    console.error(e);
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- boot ---------- */
+window.onerror = function(msg, src, line, col, err){
+  document.getElementById('error-bar').style.display='block';
+  document.getElementById('error-bar').textContent = 'Error: '+msg+' ('+src+':'+line+')';
+};
+
+resize();
+requestAnimationFrame(loop);
+
+// Fade in
+setTimeout(()=>{
+  document.getElementById('fade').style.opacity='0';
+  document.getElementById('title').style.opacity='1';
+  pill.classList.add('on');
+  document.getElementById('hint').style.opacity='1';
+  setTimeout(()=>{
+    document.getElementById('title').style.opacity='0';
+    document.getElementById('hint').style.opacity='0';
+  }, 5000);
+  // Remove fade div from DOM after transition
+  setTimeout(()=>{
+    const f = document.getElementById('fade');
+    if(f) f.style.display='none';
+  }, 2500);
+}, 200);
+</script>
+</body>
+</html>
