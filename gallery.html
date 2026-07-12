@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>晨雾未醒 · 视觉画廊</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          serif: ['"Songti SC"','"STSong"','"Source Han Serif SC"','"Noto Serif SC"','Georgia','"Times New Roman"', 'serif'],
+          sans: ['"PingFang SC"','"Hiragino Sans GB"','"Microsoft YaHei"','system-ui','-apple-system','sans-serif'],
+          mono: ['"SF Mono"','"JetBrains Mono"','ui-monospace','Menlo','monospace'],
+        },
+        colors: {
+          mist: {
+            bg:    '#0A0F0D',
+            surface:'#111916',
+            panel: '#161F1C',
+            line:  '#1E2B26',
+            soft:  '#2A3A33',
+          },
+          water: {
+            DEFAULT: '#7DB8C8',
+            soft:    '#5A929F',
+            pale:    '#A3D2DB',
+            glow:    'rgba(125,184,200,0.18)',
+          },
+          moss: {
+            DEFAULT: '#6FB08A',
+            soft:    '#528A68',
+            glow:    'rgba(111,176,138,0.12)',
+          },
+          amber: {
+            DEFAULT: '#D4A860',
+            soft:    '#B8924A',
+            glow:    'rgba(212,168,96,0.15)',
+          },
+        },
+      },
+    },
+  }
+</script>
+<style>
+  :root {
+    --serif: "Songti SC","STSong","Source Han Serif SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+    --sans:  "PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    --mono:  "SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;
+  }
+
+  /* ---------- base ---------- */
+  body {
+    background: #0A0F0D;
+    color: #DDE5DF;
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- atmospheric layers ---------- */
+  .atmos {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  }
+  .atmos-1 {
+    background: radial-gradient(ellipse 80% 70% at 15% 10%, rgba(125,184,200,0.07) 0%, transparent 60%);
+  }
+  .atmos-2 {
+    background: radial-gradient(ellipse 60% 50% at 85% 75%, rgba(111,176,138,0.05) 0%, transparent 55%);
+  }
+  .atmos-3 {
+    background: radial-gradient(ellipse 50% 40% at 50% 50%, rgba(212,168,96,0.04) 0%, transparent 50%);
+  }
+
+  /* ---------- mist particles ---------- */
+  .mist-layer {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.35;
+  }
+  .mist {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(125,184,200,0.25) 0%, transparent 70%);
+    animation: mistDrift 18s ease-in-out infinite;
+  }
+  .mist:nth-child(1) { width: 600px; height: 200px; top: 5%; left: -10%; animation-delay: 0s; animation-duration: 22s; }
+  .mist:nth-child(2) { width: 500px; height: 180px; top: 35%; left: 55%; animation-delay: -7s; animation-duration: 19s; }
+  .mist:nth-child(3) { width: 400px; height: 160px; top: 70%; left: 20%; animation-delay: -13s; animation-duration: 24s; }
+  .mist:nth-child(4) { width: 350px; height: 140px; top: 15%; left: 40%; animation-delay: -4s; animation-duration: 16s; }
+  .mist:nth-child(5) { width: 450px; height: 170px; top: 55%; left: 70%; animation-delay: -10s; animation-duration: 21s; }
+
+  @keyframes mistDrift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25%      { transform: translate(30px, -15px) scale(1.08); }
+    50%      { transform: translate(-15px, 10px) scale(0.94); }
+    75%      { transform: translate(20px, -5px) scale(1.05); }
+  }
+
+  /* ---------- glass panel ---------- */
+  .glass {
+    background: rgba(17,25,22,0.72);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .glass-card {
+    background: rgba(17,25,22,0.65);
+    border: 1px solid rgba(255,255,255,0.07);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.5s cubic-bezier(.22,.61,.36,1);
+  }
+  .glass-card:hover {
+    background: rgba(22,31,28,0.78);
+    border-color: rgba(125,184,200,0.25);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 60px rgba(125,184,200,0.08);
+  }
+
+  /* ---------- image frame ---------- */
+  .img-frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: #0A0F0D;
+  }
+  .img-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 1.2s cubic-bezier(.22,.61,.36,1), filter 0.8s ease;
+    filter: brightness(0.92) saturate(0.85);
+  }
+  .glass-card:hover .img-frame img {
+    transform: scale(1.04);
+    filter: brightness(1.02) saturate(0.95);
+  }
+  .img-frame::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(10,15,13,0.35) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  /* ---------- act badge ---------- */
+  .act-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(125,184,200,0.75);
+    background: rgba(125,184,200,0.08);
+    border: 1px solid rgba(125,184,200,0.18);
+    border-radius: 20px;
+    padding: 3px 12px;
+    white-space: nowrap;
+  }
+  .act-badge::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #7DB8C8;
+    box-shadow: 0 0 6px rgba(125,184,200,0.5);
+  }
+  .act-badge.moss {
+    color: rgba(111,176,138,0.75);
+    background: rgba(111,176,138,0.08);
+    border-color: rgba(111,176,138,0.18);
+  }
+  .act-badge.moss::before {
+    background: #6FB08A;
+    box-shadow: 0 0 6px rgba(111,176,138,0.5);
+  }
+  .act-badge.amber {
+    color: rgba(212,168,96,0.75);
+    background: rgba(212,168,96,0.08);
+    border-color: rgba(212,168,96,0.18);
+  }
+  .act-badge.amber::before {
+    background: #D4A860;
+    box-shadow: 0 0 6px rgba(212,168,96,0.5);
+  }
+
+  /* ---------- glow dot ---------- */
+  .glow-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: #7DB8C8;
+    box-shadow: 0 0 8px rgba(125,184,200,0.6), 0 0 20px rgba(125,184,200,0.25);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  /* ---------- section divider ---------- */
+  .divider {
+    display: flex; align-items: center; gap: 18px;
+    font-family: var(--serif);
+    font-size: 0.78rem;
+    letter-spacing: 0.28em;
+    color: rgba(255,255,255,0.25);
+    white-space: nowrap;
+  }
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+  }
+
+  /* ---------- nine-act timeline ---------- */
+  .timeline-node {
+    position: relative;
+    padding-left: 28px;
+  }
+  .timeline-node::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #7DB8C8;
+    box-shadow: 0 0 10px rgba(125,184,200,0.5);
+  }
+  .timeline-node::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 20px; bottom: -12px;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(125,184,200,0.35), rgba(125,184,200,0.05));
+  }
+  .timeline-node:last-child::after { display: none; }
+  .timeline-node.v2::before {
+    background: transparent;
+    border: 2px dashed rgba(255,255,255,0.25);
+    box-shadow: none;
+  }
+  .timeline-node.moss-dot::before {
+    background: #6FB08A;
+    box-shadow: 0 0 10px rgba(111,176,138,0.5);
+  }
+  .timeline-node.amber-dot::before {
+    background: #D4A860;
+    box-shadow: 0 0 10px rgba(212,168,96,0.5);
+  }
+
+  /* ---------- page entrance ---------- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .enter { animation: fadeUp 1s ease forwards; }
+  .enter-d1 { animation-delay: 0.1s; opacity: 0; }
+  .enter-d2 { animation-delay: 0.25s; opacity: 0; }
+  .enter-d3 { animation-delay: 0.4s; opacity: 0; }
+  .enter-d4 { animation-delay: 0.55s; opacity: 0; }
+  .enter-d5 { animation-delay: 0.7s; opacity: 0; }
+  .enter-d6 { animation-delay: 0.85s; opacity: 0; }
+
+  /* ---------- logo glow ---------- */
+  .logo-glow {
+    filter: drop-shadow(0 0 28px rgba(125,184,200,0.25)) drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    transition: filter 1.2s ease;
+  }
+  .logo-glow:hover {
+    filter: drop-shadow(0 0 42px rgba(125,184,200,0.4)) drop-shadow(0 2px 12px rgba(0,0,0,0.5));
+  }
+
+  /* ---------- refer stamp ---------- */
+  .refer-stamp {
+    position: relative;
+    opacity: 0.55;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .refer-stamp:hover {
+    opacity: 0.85;
+    transform: scale(1.03);
+  }
+
+  /* ---------- scrollbar ---------- */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+  /* ---------- responsive grid helpers ---------- */
+  @media (max-width: 640px) {
+    .mist { display: none; }
+    .mist:nth-child(1), .mist:nth-child(3) { display: block; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- ============ ATMOSPHERIC LAYERS ============ -->
+  <div class="atmos atmos-1"></div>
+  <div class="atmos atmos-2"></div>
+  <div class="atmos atmos-3"></div>
+  <div class="mist-layer" aria-hidden="true">
+    <div class="mist"></div>
+    <div class="mist"></div>
+    <div class="mist"></div>
+    <div class="mist"></div>
+    <div class="mist"></div>
+  </div>
+
+  <!-- ============ MAIN CONTENT ============ -->
+  <main class="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 pb-32">
+
+    <!-- ---------- HERO ---------- -->
+    <header class="pt-16 sm:pt-24 pb-10 sm:pb-16 text-center enter enter-d1">
+      <!-- Logo -->
+      <div class="inline-block mb-8">
+        <img
+          src="logo.png" alt="晨雾未醒"
+          class="logo-glow h-16 sm:h-20 w-auto mx-auto"
+        >
+      </div>
+
+      <!-- Title -->
+      <h1 class="font-[serif] text-3xl sm:text-4xl md:text-5xl font-medium tracking-[.28em] text-[#E5ECE3] mb-4" style="font-family:var(--serif); text-indent:.28em;">
+        视觉画廊
+      </h1>
+      <p class="font-[serif] italic text-base sm:text-lg tracking-[.18em] text-white/45" style="font-family:var(--serif);">
+        Verdant Mirage · Visual Gallery
+      </p>
+
+      <!-- Tagline -->
+      <p class="mt-6 font-[serif] text-sm sm:text-base tracking-[.14em] text-white/30 max-w-lg mx-auto leading-relaxed" style="font-family:var(--serif);">
+        森林的雾还未散，都还来得及。
+      </p>
+
+      <!-- Divider -->
+      <div class="divider mt-10 max-w-sm mx-auto">第一幕至第九幕</div>
+    </header>
+
+    <!-- ============ GALLERY GRID ============ -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-20">
+
+      <!-- Card 1 · 入梦 — featured: lg:col-span-2 -->
+      <article class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col enter enter-d2 lg:col-span-2">
+        <div class="img-frame aspect-[16/10] sm:aspect-[16/9] lg:aspect-[21/9] mb-4">
+          <img src="design/visuals/01-ruMeng-entering-dream.png" alt="入梦 · 第一视角穿过树叶林，尽头白光闪屏" loading="eager">
+        </div>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <span class="act-badge">第一幕</span>
+              <span class="w-1 h-1 rounded-full bg-moss-DEFAULT/40"></span>
+              <span class="font-[mono] text-[0.6rem] tracking-[.16em] text-white/25 uppercase" style="font-family:var(--mono);">MVP</span>
+            </div>
+            <h2 class="font-[serif] text-xl sm:text-2xl tracking-[.16em] text-[#E5ECE3] mb-0.5" style="font-family:var(--serif);">入梦</h2>
+            <p class="font-[serif] italic text-xs sm:text-sm tracking-[.1em] text-white/35" style="font-family:var(--serif);">Entering the Dream</p>
+          </div>
+          <p class="font-[serif] text-xs sm:text-sm tracking-[.08em] text-white/25 max-w-[280px] leading-relaxed" style="font-family:var(--serif);">
+            第一视角穿过树叶林，<br>尽头白光闪屏，抵达异世界。
+          </p>
+        </div>
+      </article>
+
+      <!-- Card 2 · 相遇 — standard -->
+      <article class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col enter enter-d2">
+        <div class="img-frame aspect-[4/5] sm:aspect-[5/6] mb-4">
+          <img src="design/visuals/02-xiangYu-listener.png" alt="相遇 · 非人倾听者现身" loading="lazy">
+        </div>
+        <div class="flex-1 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <span class="act-badge moss">第二幕</span>
+              <span class="font-[mono] text-[0.6rem] tracking-[.16em] text-white/25 uppercase" style="font-family:var(--mono);">MVP</span>
+            </div>
+            <h2 class="font-[serif] text-xl tracking-[.16em] text-[#E5ECE3] mb-0.5" style="font-family:var(--serif);">相遇</h2>
+            <p class="font-[serif] italic text-xs tracking-[.1em] text-white/35" style="font-family:var(--serif);">Meeting the Listener</p>
+          </div>
+          <p class="font-[serif] text-xs tracking-[.08em] text-white/25 leading-relaxed mt-3" style="font-family:var(--serif);">
+            场景中的非人倾听者现身、<br>无声问候——树洞深处的微光。
+          </p>
+        </div>
+      </article>
+
+      <!-- Card 3 · 记梦 — standard -->
+      <article class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col enter enter-d3">
+        <div class="img-frame aspect-[4/5] sm:aspect-[5/6] mb-4">
+          <img src="design/visuals/03-jiMeng-firefly-bottle.png" alt="记梦 · 话语化作光丝流进萤火瓶中" loading="lazy">
+        </div>
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="act-badge amber">第三幕</span>
+            <span class="font-[mono] text-[0.6rem] tracking-[.16em] text-white/25 uppercase" style="font-family:var(--mono);">MVP</span>
+          </div>
+          <h2 class="font-[serif] text-xl tracking-[.16em] text-[#E5ECE3] mb-0.5" style="font-family:var(--serif);">记梦</h2>
+          <p class="font-[serif] italic text-xs tracking-[.1em] text-white/35" style="font-family:var(--serif);">Recording the Dream</p>
+          <p class="font-[serif] text-xs tracking-[.08em] text-white/25 leading-relaxed mt-3" style="font-family:var(--serif);">
+            语音优先，怎么破碎都合法。<br>话语凝成容器里的光。
+          </p>
+        </div>
+      </article>
+
+      <!-- Card 4 · 显影 — featured: lg:col-span-2, positioned at right -->
+      <article class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col enter enter-d4 lg:col-span-2 lg:col-start-2">
+        <div class="img-frame aspect-[16/10] sm:aspect-[16/9] lg:aspect-[21/9] mb-4">
+          <img src="design/visuals/04-xianYing-dream-manifest.png" alt="显影 · 梦境凝成一张画" loading="lazy">
+        </div>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <span class="act-badge">第五幕</span>
+              <span class="font-[mono] text-[0.6rem] tracking-[.16em] text-white/25 uppercase" style="font-family:var(--mono);">MVP</span>
+            </div>
+            <h2 class="font-[serif] text-xl sm:text-2xl tracking-[.16em] text-[#E5ECE3] mb-0.5" style="font-family:var(--serif);">显影</h2>
+            <p class="font-[serif] italic text-xs sm:text-sm tracking-[.1em] text-white/35" style="font-family:var(--serif);">Dream Manifestation</p>
+          </div>
+          <p class="font-[serif] text-xs sm:text-sm tracking-[.08em] text-white/25 max-w-[280px] leading-relaxed" style="font-family:var(--serif);">
+            梦境凝成一张画，<br>用选择共创——不必写 prompt。
+          </p>
+        </div>
+      </article>
+
+      <!-- Card 5 · 归还 — standard -->
+      <article class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col enter enter-d5">
+        <div class="img-frame aspect-[4/5] sm:aspect-[5/6] mb-4">
+          <img src="design/visuals/05-guiHuan-return-ritual.png" alt="归还 · 留给森林 / 化作雾光 / 带走" loading="lazy">
+        </div>
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="act-badge amber">第八幕</span>
+            <span class="font-[mono] text-[0.6rem] tracking-[.16em] text-white/25 uppercase" style="font-family:var(--mono);">MVP</span>
+          </div>
+          <h2 class="font-[serif] text-xl tracking-[.16em] text-[#E5ECE3] mb-0.5" style="font-family:var(--serif);">归还</h2>
+          <p class="font-[serif] italic text-xs tracking-[.1em] text-white/35" style="font-family:var(--serif);">The Return Ritual</p>
+          <p class="font-[serif] text-xs tracking-[.08em] text-white/25 leading-relaxed mt-3" style="font-family:var(--serif);">
+            数据主权即仪式——<br>留给森林 / 化作雾光 / 带走。
+          </p>
+        </div>
+      </article>
+
+      <!-- Card 6 · 入睡 — featured: lg:col-span-2, full-width closer -->
+      <article class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col enter enter-d6 lg:col-span-3">
+        <div class="img-frame aspect-[16/9] sm:aspect-[21/9] lg:aspect-[31/9] mb-4">
+          <img src="design/visuals/06-ruShui-breathing-light.png" alt="入睡 · 白噪音、呼吸光点、小故事" loading="lazy">
+        </div>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <span class="act-badge moss">第九幕</span>
+              <span class="font-[mono] text-[0.6rem] tracking-[.16em] text-white/25 uppercase" style="font-family:var(--mono);">MVP</span>
+            </div>
+            <h2 class="font-[serif] text-xl sm:text-2xl tracking-[.16em] text-[#E5ECE3] mb-0.5" style="font-family:var(--serif);">入睡</h2>
+            <p class="font-[serif] italic text-xs sm:text-sm tracking-[.1em] text-white/35" style="font-family:var(--serif);">Falling Asleep</p>
+          </div>
+          <p class="font-[serif] text-xs sm:text-sm tracking-[.08em] text-white/25 max-w-[320px] leading-relaxed" style="font-family:var(--serif);">
+            依据梦的内容生成助眠——<br>白噪音、呼吸光点、小故事。<br>放下手机，安心睡去。
+          </p>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ============ NINE-ACT TIMELINE ============ -->
+    <section class="glass rounded-2xl p-6 sm:p-10 mb-20 enter enter-d4">
+      <div class="divider mb-10">完整仪式九幕</div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
+
+        <!-- Act 1 -->
+        <div class="timeline-node pb-6">
+          <span class="act-badge text-[0.6rem] mb-2 inline-flex">第一幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">入梦</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Entering the Dream</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">第一视角穿过树叶林，尽头白光闪屏，抵达异世界。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-moss-DEFAULT/50 mt-1.5 inline-block" style="font-family:var(--mono);">🖼 视觉已呈现</span>
+        </div>
+
+        <!-- Act 2 -->
+        <div class="timeline-node moss-dot pb-6">
+          <span class="act-badge moss text-[0.6rem] mb-2 inline-flex">第二幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">相遇</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Meeting the Listener</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">非人倾听者现身、无声问候。永不下线，永不评判。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-moss-DEFAULT/50 mt-1.5 inline-block" style="font-family:var(--mono);">🖼 视觉已呈现</span>
+        </div>
+
+        <!-- Act 3 -->
+        <div class="timeline-node amber-dot pb-6">
+          <span class="act-badge amber text-[0.6rem] mb-2 inline-flex">第三幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">记梦</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Recording the Dream</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">语音优先 + 碎片文字 + 氛围印章。怎么破碎都合法。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-amber-DEFAULT/50 mt-1.5 inline-block" style="font-family:var(--mono);">🖼 视觉已呈现</span>
+        </div>
+
+        <!-- Act 4 -->
+        <div class="timeline-node pb-6">
+          <span class="act-badge text-[0.6rem] mb-2 inline-flex border-white/10 text-white/30" style="background:rgba(255,255,255,0.03);">第四幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">织梦</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Weaving the Dream</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">Ullman 五阶段改编——倾听者以复述和轻提问帮梦者把梦织完整。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-white/20 mt-1.5 inline-block" style="font-family:var(--mono);">对话体验 · 无独立视觉</span>
+        </div>
+
+        <!-- Act 5 -->
+        <div class="timeline-node pb-6">
+          <span class="act-badge text-[0.6rem] mb-2 inline-flex">第五幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">显影</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Dream Manifestation</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">梦境凝成一张画。AI 异步生成 + 参考图锁风格 + 3 选 1 + 统一装裱。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-water-DEFAULT/50 mt-1.5 inline-block" style="font-family:var(--mono);">🖼 视觉已呈现</span>
+        </div>
+
+        <!-- Act 6 -->
+        <div class="timeline-node v2 pb-6">
+          <span class="act-badge text-[0.6rem] mb-2 inline-flex border-dashed border-white/15 text-white/25" style="background:rgba(255,255,255,0.02);">第六幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-white/50 mt-2" style="font-family:var(--serif);">续梦</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/20 mt-0.5" style="font-family:var(--serif);">Continuing the Dream</p>
+          <p class="text-xs text-white/25 mt-2 leading-relaxed">IRT 重写游戏化——连环画选择式延伸。V2 登场。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-white/15 mt-1.5 inline-block" style="font-family:var(--mono);">⏳ V2 · 尚未显影</span>
+        </div>
+
+        <!-- Act 7 -->
+        <div class="timeline-node moss-dot pb-6">
+          <span class="act-badge moss text-[0.6rem] mb-2 inline-flex border-white/10 text-white/30" style="background:rgba(255,255,255,0.03);">第七幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">安放</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Settling</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">环境化、可选、不说教。PFA 循证折中——雾变柔，光点聚拢。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-white/20 mt-1.5 inline-block" style="font-family:var(--mono);">氛围体验 · 无独立视觉</span>
+        </div>
+
+        <!-- Act 8 -->
+        <div class="timeline-node amber-dot pb-6">
+          <span class="act-badge amber text-[0.6rem] mb-2 inline-flex">第八幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">归还</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">The Return Ritual</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">留给森林 / 化作雾光 / 带走——梦的容器的三种归宿。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-amber-DEFAULT/50 mt-1.5 inline-block" style="font-family:var(--mono);">🖼 视觉已呈现</span>
+        </div>
+
+        <!-- Act 9 -->
+        <div class="timeline-node moss-dot">
+          <span class="act-badge moss text-[0.6rem] mb-2 inline-flex">第九幕</span>
+          <h3 class="font-[serif] text-lg tracking-[.14em] text-[#E5ECE3] mt-2" style="font-family:var(--serif);">入睡</h3>
+          <p class="font-[serif] italic text-[0.7rem] tracking-[.08em] text-white/30 mt-0.5" style="font-family:var(--serif);">Falling Asleep</p>
+          <p class="text-xs text-white/35 mt-2 leading-relaxed">白噪音、呼吸光点、小故事——每晚可以安心睡去的地方。</p>
+          <span class="font-[mono] text-[0.55rem] tracking-[.12em] text-moss-DEFAULT/50 mt-1.5 inline-block" style="font-family:var(--mono);">🖼 视觉已呈现</span>
+        </div>
+
+      </div>
+
+      <!-- Legend -->
+      <div class="flex flex-wrap gap-6 mt-10 pt-6 border-t border-white/[0.06]">
+        <div class="flex items-center gap-2 text-[0.65rem] tracking-[.1em] text-white/25" style="font-family:var(--mono);">
+          <span class="glow-dot"></span> 已实现视觉
+        </div>
+        <div class="flex items-center gap-2 text-[0.65rem] tracking-[.1em] text-white/18" style="font-family:var(--mono);">
+          <span class="w-2 h-2 rounded-full border border-dashed border-white/20 inline-block flex-shrink-0"></span> V2 待登场
+        </div>
+        <div class="flex items-center gap-2 text-[0.65rem] tracking-[.1em] text-white/18" style="font-family:var(--mono);">
+          <span class="w-2 h-2 rounded-full bg-white/15 inline-block flex-shrink-0"></span> 体验/对话层
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="text-center enter enter-d6">
+      <!-- Refer image -->
+      <div class="refer-stamp inline-block mb-8">
+        <img
+          src="refer.png" alt="晨雾未醒 · 视觉参考"
+          class="h-12 sm:h-14 w-auto mx-auto"
+        >
+      </div>
+
+      <p class="font-[serif] text-xs tracking-[.2em] text-white/20" style="font-family:var(--serif);">
+        晨雾未醒 Verdant Mirage · v0.1 · 视觉画廊
+      </p>
+      <p class="font-[serif] text-[0.65rem] tracking-[.14em] text-white/12 mt-2" style="font-family:var(--serif);">
+        扁平插画 · 低饱和 · 雾 · 点光 — GRIS 系视觉语言
+      </p>
+      <p class="font-[mono] text-[0.55rem] tracking-[.1em] text-white/10 mt-3" style="font-family:var(--mono);">
+        2 人 + AI · 2026.07
+      </p>
+    </footer>
+
+  </main>
+
+</body>
+</html>
