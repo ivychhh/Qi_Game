@@ -55,6 +55,9 @@
     transition:opacity 1.4s ease;
   }
   #video-layer.fading{ opacity:0; pointer-events:none; }
+
+  #flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:60; }
+
   #video-layer video{ display:block; object-fit:cover; }
 
   #video-skip{
@@ -83,6 +86,7 @@
   <video id="entry-video" muted playsinline autoplay src="../开屏动画5.mp4"></video>
 </div>
 <div id="video-skip" aria-hidden="true">轻触跳过</div>
+	<div id="flash" aria-hidden="true"></div>
 <div id="fade" aria-hidden="true"></div>
 <div id="error-bar" aria-live="assertive"></div>
 <div id="title" aria-hidden="true">
@@ -204,7 +208,8 @@ const cx2 = cv.getContext('2d');
 let W=0, H=0, DPR=1, BLEED=56;
 let effectiveW=0, effectiveH=0;
 let tStart = performance.now();
-let mode = 'video'; // video → fadeIn → scene
+let mode = 'video'; // video → flash → fadeIn → scene
+	let flashT0 = 0;
 let videoDone = false; // true once video has been shown (session-scope, prevent replay on ?entry=0)
 let geo = null, sprites = [];
 let fogBlobs = [], flies = [], ripples = [];
@@ -665,7 +670,59 @@ function drawRipples(ctx,t){
 
 const PARX_ALL=[4,9,15,24,34,45], PARY_ALL=[2,4,7,10,14,18], BAMP_ALL=[.0018,.003,.0045,.006,.0085,.011];
 
-function drawScene(now){
+function drawFlash(now){
+	  const t = (now - flashT0) / 1000;
+	  const el = document.getElementById('flash');
+	  if(t < 0.35){
+	    // Flash rises — video still visible behind it (z-index:60 > video:55)
+	    el.style.opacity = (t / 0.35).toFixed(3);
+	  } else {
+	    // Flash fades — hide video, render scene underneath
+	    if(!drawFlash._videoHidden){
+	      videoLayer.style.display = 'none';
+	      videoDone = true;
+	      drawFlash._videoHidden = true;
+	    }
+	    if(!drawFlash._sceneReady){
+	      tStart = now;
+	      drawFlash._sceneReady = true;
+	    }
+	    el.style.opacity = Math.max(0, 1 - (t - 0.35) / 1.8).toFixed(3);
+	    drawScene(now);
+	    if(t > 0.9) revealUI();
+	    if(t > 2.3){
+	      mode = 'scene';
+	      el.style.opacity = '0';
+	    }
+	  }
+	}
+
+	function drawFlash(now){
+	  const t = (now - flashT0) / 1000;
+	  const el = document.getElementById('flash');
+	  if(t < 0.35){
+	    el.style.opacity = (t / 0.35).toFixed(3);
+	  } else {
+	    if(!drawFlash._videoHidden){
+	      videoLayer.style.display = 'none';
+	      videoDone = true;
+	      drawFlash._videoHidden = true;
+	    }
+	    if(!drawFlash._sceneReady){
+	      tStart = now;
+	      drawFlash._sceneReady = true;
+	    }
+	    el.style.opacity = Math.max(0, 1 - (t - 0.35) / 1.8).toFixed(3);
+	    drawScene(now);
+	    if(t > 0.9) revealUI();
+	    if(t > 2.3){
+	      mode = 'scene';
+	      el.style.opacity = '0';
+	    }
+	  }
+	}
+
+	function drawScene(now){
   const t=(now-tStart)/1000;
   const period = CONFIG.breathPeriod;
   const amp = CONFIG.breathAmp/100;
@@ -698,6 +755,18 @@ function drawScene(now){
   cx2.globalAlpha=.05;
   cx2.drawImage(grain, reduceMotion?0:((t*7)%128)-128, reduceMotion?0:((t*3)%128)-128, W+256, H+256);
   cx2.globalAlpha=1;
+}
+
+let uiRevealed = false;
+function revealUI(){
+  if(uiRevealed) return; uiRevealed = true;
+  document.getElementById('title').style.opacity = '1';
+  pill.classList.add('on');
+  document.getElementById('hint').style.opacity = '1';
+  setTimeout(()=>{
+    document.getElementById('title').style.opacity = '0';
+    document.getElementById('hint').style.opacity = '0';
+  }, 4600);
 }
 
 /* ---------- interaction ---------- */
@@ -781,7 +850,8 @@ let rsT; window.addEventListener('resize',()=>{ clearTimeout(rsT); rsT=setTimeou
 function loop(now){
   try {
     cx2.setTransform(DPR,0,0,DPR,0,0);
-    drawScene(now);
+    if(mode==='flash') drawFlash(now);
+    else drawScene(now);
     frameTimes.push(now);
     if(frameTimes.length>90){
       const span=frameTimes[89]-frameTimes[0]; frameTimes=[];
@@ -836,59 +906,59 @@ function positionVideo(){
   entryVideo.style.height = vh+'px';
 }
 
-function videoToFadeIn(instant){
-  // Guard against double handoff (timeupdate + ended race)
-  if(mode!=='video') return;
-  clearTimeout(videoTimer);
-  entryVideo.pause();
+function videoToFlash(instant){
+	  // Guard against double handoff (timeupdate + ended race)
+	  if(mode!=='video') return;
+	  clearTimeout(videoTimer);
+	  entryVideo.pause();
 
-  // Immediately reveal the canvas scene underneath — the canvas has been
-  // rendering from rAF frame 1, so crossfade is: video opacity→0 over canvas.
-  document.getElementById('fade').style.opacity='0';
-  document.getElementById('fade').style.display='none';
+	  // Kill #fade immediately — flash will cover the transition
+	  document.getElementById('fade').style.opacity = '0';
+	  document.getElementById('fade').style.display = 'none';
 
-  // Start video layer fade-out
-  const delay = instant ? 0 : 1400;
-  videoLayer.classList.add('fading');
-  videoSkip.classList.remove('on');
+	  // Hide skip hint
+	  videoSkip.classList.remove('on');
+	  videoSkip.textContent = '轻触跳过';
+	  clearTimeout(skipResetTimer);
+	  skipStage = 0;
 
-  setTimeout(()=>{
-    videoLayer.style.display='none';
-    videoDone = true;
-    mode = 'fadeIn';
-    // Scene is already visible — just show UI
-    document.getElementById('title').style.opacity='1';
-    pill.classList.add('on');
-    document.getElementById('hint').style.opacity='1';
-    setTimeout(()=>{
-      document.getElementById('title').style.opacity='0';
-      document.getElementById('hint').style.opacity='0';
-    }, 5000);
-    setTimeout(()=>{
-      if(mode==='fadeIn') mode='scene';
-    }, 2500);
-  }, delay);
-}
+	  // Enter flash ritual (canvas-based, proven in style-lab)
+	  mode = 'flash';
+	  flashT0 = instant ? performance.now() + 0.35 : performance.now();
+	  drawFlash._videoHidden = false;
+	  drawFlash._sceneReady = false;
+	}
 
+	// Two-stage skip
+	let skipStage = 0;
+	let skipResetTimer = null;
 function setupVideo(){
   positionVideo();
   videoLayer.style.display='flex';
-  videoLayer.style.opacity='1';
+  videoLayer.style.transition='opacity 0.8s ease';
+  videoLayer.style.opacity='0';
   videoLayer.classList.remove('fading');
   videoSkip.classList.add('on');
+
+  // Fade video in from black
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      videoLayer.style.opacity = '1';
+    });
+  });
 
   // Monitor timeupdate for early crossfade (last 1.2s)
   function onTimeUpdate(){
     if(entryVideo.duration && entryVideo.currentTime > entryVideo.duration - 1.3){
       entryVideo.removeEventListener('timeupdate', onTimeUpdate);
-      videoToFadeIn(false);
+      videoToFlash(false);
     }
   }
   entryVideo.addEventListener('timeupdate', onTimeUpdate, {once: false});
 
   // Video ended naturally before timeupdate caught it
   entryVideo.addEventListener('ended', ()=>{
-    videoToFadeIn(false);
+    videoToFlash(false);
   });
 
   // Playback start
@@ -896,28 +966,41 @@ function setupVideo(){
   if(playPromise && playPromise.catch){
     playPromise.catch(()=>{
       // autoplay rejected → fallback
-      if(mode==='video') videoToFadeIn(true);
+      if(mode==='video') videoToFlash(true);
     });
   }
 
   // Load error
   entryVideo.addEventListener('error', ()=>{
-    if(mode==='video') videoToFadeIn(true);
+    if(mode==='video') videoToFlash(true);
   });
 
   // 3s timeout — if video hasn't started playing by then, fallback
   videoTimer = setTimeout(()=>{
     if(mode==='video' && entryVideo.currentTime < 0.1){
-      videoToFadeIn(true);
+      videoToFlash(true);
     }
   }, 3000);
 }
 
-// Skip: tap anywhere during video
+// Skip: two-stage tap during video (prevents accidental skip)
 function onVideoSkip(e){
   if(mode!=='video') return;
   e.preventDefault(); e.stopPropagation();
-  videoToFadeIn(false);
+  if(skipStage === 0){
+    skipStage = 1;
+    videoSkip.textContent = '再点一次跳过';
+    clearTimeout(skipResetTimer);
+    skipResetTimer = setTimeout(()=>{
+      skipStage = 0;
+      videoSkip.textContent = '轻触跳过';
+    }, 2500);
+  } else {
+    clearTimeout(skipResetTimer);
+    skipStage = 0;
+    videoSkip.textContent = '轻触跳过';
+    videoToFlash(false);
+  }
 }
 videoLayer.addEventListener('click', onVideoSkip);
 videoSkip.addEventListener('click', onVideoSkip);
