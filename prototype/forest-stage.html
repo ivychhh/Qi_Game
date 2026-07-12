@@ -274,7 +274,7 @@ let frameTimes = [];
 const presence = {
   started:false, lastInteractAt:0, welcomePhase:'pending', welcomeT0:0, welcomeBright:0.1,
   nextAttentionAt:999, gazeCurrent:{dx:0,dy:0}, gazeTarget:{dx:0,dy:0}, gazeFrom:{dx:0,dy:0}, gazeLerp:1,
-  warmTicks:0, warmMix:0, gatheredCount:0, whisperDone:false, attentionBlinkT:-999
+  warmTicks:0, warmMix:0, gatheredCount:0, whisperDone:false
 };
 
 function presenceGlowHex(){
@@ -291,8 +291,8 @@ function scheduleNextAttention(fromT){
 function triggerAttention(t){
   const L=listener;
   if(Math.random()<.45){
-    presence.attentionBlinkT = t;
-    listener.nextBlink = t + pScaled(PRESENCE_ATTENTION_MIN);
+    L.blinkT = t;
+    L.nextBlink = t + pScaled(2.6 + Math.random() * 4.5);
   } else {
     const spread = reduceMotion ? 0 : 1;
     presence.gazeFrom = {...presence.gazeCurrent};
@@ -1437,6 +1437,8 @@ videoLayer.style.display = 'none';
 startGate();
 
 window.__presence = presence;
+window.__listener = listener;
+window.__triggerAttention = triggerAttention;
 window.__getMode = ()=>mode;
 window.__getSceneT = ()=>(performance.now()-tStart)/1000;
 

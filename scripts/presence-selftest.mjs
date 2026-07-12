@@ -121,6 +121,17 @@ async function main() {
     const welcomeDone = await evalJs(ws, 'window.__presence.welcomePhase');
     if (welcomeDone !== 'done') throw new Error(`Welcome not done: ${welcomeDone}`);
 
+    // Attention blink branch: force Math.random<.45 → listener.blinkT must advance to trigger time
+    const attentionBlink = await evalJs(ws, `(function(){
+      const t = window.__getSceneT();
+      const origRandom = Math.random;
+      Math.random = () => 0.1;
+      window.__triggerAttention(t);
+      Math.random = origRandom;
+      return Math.abs(window.__listener.blinkT - t) < 0.05;
+    })()`);
+    if (!attentionBlink) throw new Error('Attention blink branch did not set listener.blinkT');
+
     // Idle warmth at 9s (90s scaled)
     await sleep(9500);
     const gathered = await evalJs(ws, 'window.__presence.gatheredCount');
