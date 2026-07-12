@@ -784,6 +784,7 @@ requestAnimationFrame(loop);
 
 // Fade in
 setTimeout(()=>{
+  mode = 'scene'; // unlock touch interaction
   document.getElementById('fade').style.opacity='0';
   document.getElementById('title').style.opacity='1';
   pill.classList.add('on');
